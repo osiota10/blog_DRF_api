@@ -139,3 +139,5 @@ cloudinary.config(
     api_key=env('api_key'),
     api_secret=env('api_secret')
 )
+
+AUTH_USER_MODEL = 'blog.UserAccount'
