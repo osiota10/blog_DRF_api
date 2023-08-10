@@ -90,3 +90,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 class Author(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='rel_author',
                              on_delete=models.CASCADE)
+
+
+class Category(models.Model):
+    name = models.CharField(max_length=15)
