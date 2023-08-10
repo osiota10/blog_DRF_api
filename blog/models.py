@@ -34,6 +34,8 @@ class UserAccountManager(BaseUserManager):
 
         return self._create_user(email, password, **extra_fields)
 
+# For all Users
+
 
 class UserAccount(AbstractBaseUser, PermissionsMixin):
     GENDER = [
@@ -83,3 +85,8 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+
+
+class Author(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='rel_author',
+                             on_delete=models.CASCADE)
