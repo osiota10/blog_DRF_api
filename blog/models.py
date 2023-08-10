@@ -111,7 +111,7 @@ class Post(models.Model):
     author = models.ForeignKey(
         Author, related_name='post_author', on_delete=models.CASCADE)
     category = models.ForeignKey(
-        Category, on_delete=models.SET_NULL, null=True)
+        Category, related_name='post_category', on_delete=models.SET_NULL, null=True)
     tags = models.ManyToManyField(Tag)
     keywords = models.ManyToManyField(Keyword)
 
