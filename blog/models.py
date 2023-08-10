@@ -94,3 +94,7 @@ class Author(models.Model):
 
 class Category(models.Model):
     name = models.CharField(max_length=15)
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=15)
