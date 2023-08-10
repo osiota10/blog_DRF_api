@@ -98,3 +98,7 @@ class Category(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=15)
+
+
+class Keyword(models.Model):
+    name = models.CharField(max_length=15)
