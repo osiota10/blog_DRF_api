@@ -19,12 +19,7 @@ class CategoryView(generics.ListAPIView):
 
 
 class PostView(APIView):
-
-    def get_permissions(self):
-        if self.request.method == 'GET':
-            return [AllowAny()]
-        else:
-            return [IsAuthenticated()]
+    permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
         pass
