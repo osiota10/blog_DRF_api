@@ -114,6 +114,7 @@ class Post(models.Model):
         Category, related_name='post_category', on_delete=models.SET_NULL, null=True)
     tags = models.ManyToManyField(Tag, related_name='post_tag')
     keywords = models.ManyToManyField(Keyword, related_name='post_keyword')
+    slug = models.SlugField(max_length=250, blank=True, null=True)
 
     def __str__(self):
         return self.title
