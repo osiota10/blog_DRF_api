@@ -16,7 +16,7 @@ This is an open-source Django Rest Framework API for building a powerful and fle
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/your-blog-api.git
+   https://github.com/osiota10/blog_DRF_api.git
    ```
 2. Create and activate a virtual environment:
    ```
