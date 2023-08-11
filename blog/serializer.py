@@ -25,7 +25,7 @@ class KeywordSerializer(serializers.ModelSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(many=True)
+    category = CategorySerializer()
 
     class Meta:
         model = Post
