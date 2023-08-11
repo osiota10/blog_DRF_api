@@ -1,9 +1,16 @@
 from rest_framework import serializers
 from .models import *
-# from djoser.serializers import UserCreateSerializer, UserSerializer
+from djoser.serializers import UserCreateSerializer, UserSerializer
 from django.contrib.auth import get_user_model
 
 user = get_user_model()
+
+
+class UserInfoSerializer(UserSerializer):
+    class Meta(UserSerializer.Meta):
+        model = user
+        fields = ('id', 'first_name', 'last_name', 'phone_number', 'email', 'get_photo_url', 'date_of_birth',
+                  'gender', 'home_address', 'local_govt', 'state_of_origin', 'nationality', 'image',)
 
 
 class CategorySerializer(serializers.ModelSerializer):
