@@ -92,11 +92,6 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
-class Author(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='rel_author',
-                             on_delete=models.CASCADE)
-
-
 class Category(models.Model):
     name = models.CharField(max_length=50)
 
@@ -114,7 +109,7 @@ class Post(models.Model):
     content = models.TextField()
     pub_date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
-        Author, related_name='post_author', on_delete=models.CASCADE)
+        settings.AUTH_USER_MODEL, related_name='post_author', on_delete=models.CASCADE)
     category = models.ForeignKey(
         Category, related_name='post_category', on_delete=models.SET_NULL, null=True)
     tags = models.ManyToManyField(Tag, related_name='post_tag')
