@@ -34,8 +34,6 @@ class UserAccountManager(BaseUserManager):
 
         return self._create_user(email, password, **extra_fields)
 
-# For all Users
-
 
 class UserAccount(AbstractBaseUser, PermissionsMixin):
     GENDER = [
@@ -43,9 +41,16 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         ('Female', 'Female')
     ]
 
+    USER_TYPE = [
+        ('Author', 'Author'),
+        ('Public', 'Public')
+    ]
+
     email = models.EmailField(max_length=255, unique=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
+    account_type = models.CharField(
+        max_length=255, blank=True, choices=USER_TYPE, default='Public')
     phone_number = models.CharField(null=True, blank=True, max_length=11, validators=[
                                     RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')])
     date_of_birth = models.DateField(null=True, blank=True)
