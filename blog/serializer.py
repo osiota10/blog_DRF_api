@@ -18,6 +18,12 @@ class TagSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class KeywordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Keyword
+        fields = "__all__"
+
+
 class PostSerializer(serializers.ModelSerializer):
     category = CategorySerializer(many=True)
 
