@@ -26,7 +26,10 @@ class KeywordSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
+    tags = TagSerializer(many=True)
+    Keywords = KeywordSerializer(many=True)
 
     class Meta:
         model = Post
-        fields = ('id', 'content', 'pub_date', 'slug', 'category')
+        fields = ('id', 'content', 'pub_date', 'slug',
+                  'category', 'tags', 'keywords')
