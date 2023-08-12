@@ -27,7 +27,20 @@ class PostView(APIView):
         return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
-        pass
+        post_id = request.data.get('id')
+
+        try:
+            post = Post.objects.get(
+                id=post_id, user=self.request.user)
+        except Post.DoesNotExist:
+            return Response({'error': 'Post not found.'}, status=404)
+
+        serializer = PostSerializer(post, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=200)
+
+        return Response(serializer.errors, status=400)
 
     def post(self, request, *args, **kwargs):
         title = request.data.get('title')
