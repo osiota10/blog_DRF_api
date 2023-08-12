@@ -22,7 +22,9 @@ class PostView(APIView):
     permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
-        pass
+        posts = Post.objects.filter(user=self.request.user)
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
         pass
