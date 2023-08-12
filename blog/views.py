@@ -12,6 +12,12 @@ from rest_framework.views import APIView
 from rest_framework import status
 
 
+class PostListView(generics.ListAPIView):  # Public users
+    serializer_class = PostSerializer
+    queryset = Post.objects.all()
+    permission_classes = [AllowAny,]
+
+
 class CategoryView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
