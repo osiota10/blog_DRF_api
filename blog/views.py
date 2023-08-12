@@ -94,7 +94,22 @@ class CommentView(APIView):
         pass
 
     def post(self, request, *args, **kwargs):
-        pass
+        comment = request.data.get('comment')
+        # Please remember to review logic again (next line)
+        post_id = request.data.get('post')
+        post = Post.objects.get(id=post_id)
+
+        if not comment or not post:
+            return Response({'error': 'Comment and Post are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            comment = Post.objects.create(
+                user=request.user, comment=comment, post=post)
+
+            serializer = CommentSerializer(comment)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def delete(self, request, *args, **kwargs):
         pass
