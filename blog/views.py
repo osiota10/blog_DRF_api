@@ -88,7 +88,14 @@ class CommentView(APIView):
     permission_classes = [AllowAny,]
 
     def get(self, request, *args, **kwargs):
-        pass
+        # Get the post_id from query parameters
+        post_id = request.GET.get('post_id')
+        if post_id is None:
+            return Response({"error": "Missing 'post_id' query parameter."}, status=400)
+
+        comments = Comment.objects.filter(post_id=post_id)
+        serializer = PostSerializer(comments, many=True)
+        return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
         pass
