@@ -85,7 +85,7 @@ class PostView(APIView):  # Authors
 
 
 class CommentView(APIView):
-    permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
         # Get the post_id from query parameters
