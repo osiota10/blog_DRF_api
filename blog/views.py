@@ -18,6 +18,13 @@ class PostListView(generics.ListAPIView):  # Public users
     permission_classes = [AllowAny,]
 
 
+class PostDetailView(generics.RetrieveAPIView):
+    lookup_field = 'slug'
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    permission_classes = [AllowAny,]
+
+
 class CategoryView(generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
