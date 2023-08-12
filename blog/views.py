@@ -18,7 +18,7 @@ class CategoryView(generics.ListAPIView):
     permission_classes = [AllowAny,]
 
 
-class PostView(APIView):
+class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
