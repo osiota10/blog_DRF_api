@@ -10,6 +10,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from djoser.views import UserViewSet
 from rest_framework.views import APIView
 from rest_framework import status
+from django.contrib.contenttypes.models import ContentType
 
 
 class PostListView(generics.ListAPIView):  # Public users
@@ -126,3 +127,31 @@ class CommentView(APIView):
 
     def delete(self, request, *args, **kwargs):
         pass
+
+
+class LikeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        content_type = request.data.get('content_type')
+        object_id = request.data.get('object_id')
+
+        if not content_type or not object_id:
+            return Response({'error': 'content_type and object_id are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            content_type = ContentType.objects.get(model=content_type)
+        except ContentType.DoesNotExist:
+            return Response({'error': 'Invalid content_type.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        like, created = Like.objects.get_or_create(
+            user=request.user,
+            content_type=content_type,
+            object_id=object_id
+        )
+
+        if created:
+            return Response({'message': 'Liked successfully.'}, status=status.HTTP_201_CREATED)
+        else:
+            like.delete()
+            return Response({'message': 'Unliked successfully.'}, status=status.HTTP_200_OK)
