@@ -62,3 +62,15 @@ class PostSerializer(serializers.ModelSerializer):
         model = Post
         fields = ('id', 'content', 'pub_date', 'slug',
                   'category', 'tags', 'keywords', 'comments', 'author')
+
+
+class LikeSerializer(serializers.ModelSerializer):
+    user = UserInfoSerializer()
+    content_object = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Like
+        fields = ('id', 'user', 'content_object', 'created_at')
+
+    def get_content_object(self, obj):
+        return str(obj.content_object)
