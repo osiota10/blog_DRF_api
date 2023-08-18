@@ -40,10 +40,15 @@ class KeywordSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     user = UserInfoSerializer()
+    replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ('id', 'user', 'comment', 'created_at')
+        fields = ('id', 'user', 'comment', 'created_at', 'replies')
+
+    def get_replies(self, obj):
+        replies = obj.replies.all()
+        return CommentSerializer(replies, many=True).data
 
 
 class PostSerializer(serializers.ModelSerializer):
