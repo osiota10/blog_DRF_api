@@ -102,16 +102,22 @@ class CommentView(APIView):
 
     def post(self, request, *args, **kwargs):
         comment = request.data.get('comment')
-        # Please remember to review logic again (next line)
         post_id = request.data.get('post')
-        post = Post.objects.get(id=post_id)
+        parent_comment_id = request.data.get('parent_comment')
 
-        if not comment or not post:
-            return Response({'error': 'Comment and Post are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not comment or not parent_comment_id or not post_id:
+            return Response({'error': 'Comment and Post_ID are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            comment = Post.objects.create(
-                user=request.user, comment=comment, post=post)
+            post = Post.objects.get(id=post_id)
+
+            if parent_comment_id:
+                parent_comment = Comment.objects.get(id=parent_comment_id)
+                comment = Comment.objects.create(
+                    user=request.user, comment=comment, post=post, parent=parent_comment)
+            else:
+                comment = Comment.objects.create(
+                    user=request.user, comment=comment, post=post)
 
             serializer = CommentSerializer(comment)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
