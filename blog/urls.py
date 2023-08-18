@@ -6,4 +6,5 @@ urlpatterns = [
     path('post-list', PostListView.as_view()),  # Public users
     path('post-list/<slug:slug>', PostDetailView.as_view()),  # Public users
     path('post', PostView.as_view()),  # Authors
+    path('comment', CommentView.as_view()),  # Authors
 ]
