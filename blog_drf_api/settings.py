@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blog.apps.ApiConfig',
+    'django_drf_blog_api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -181,4 +181,4 @@ cloudinary.config(
     api_secret=env('api_secret')
 )
 
-AUTH_USER_MODEL = 'blog.UserAccount'
+AUTH_USER_MODEL = 'django_drf_blog_api.UserAccount'
