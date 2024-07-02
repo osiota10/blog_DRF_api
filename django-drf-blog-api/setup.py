@@ -6,7 +6,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.rst").read_text()
 
 setup(
-    name='django-drf-blog-app',
+    name='django-drf-blog-api',
     # other arguments omitted
     long_description=long_description,
     long_description_content_type='text/markdown'
