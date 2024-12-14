@@ -182,4 +182,4 @@ cloudinary.config(
     api_secret=env('api_secret')
 )
 
-AUTH_USER_MODEL = 'django_drf_blog_api.UserAccount'
+AUTH_USER_MODEL = 'accounts.UserAccount'
