@@ -7,7 +7,6 @@ setup.py
 django_drf_blog_api/__init__.py
 django_drf_blog_api/admin.py
 django_drf_blog_api/apps.py
-django_drf_blog_api/forms.py
 django_drf_blog_api/models.py
 django_drf_blog_api/serializer.py
 django_drf_blog_api/signals.py
