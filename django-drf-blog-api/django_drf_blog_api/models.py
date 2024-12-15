@@ -7,13 +7,22 @@ from django.contrib.contenttypes.models import ContentType
 class Category(models.Model):
     name = models.CharField(max_length=50)
 
+    def __str__(self):
+        return self.name
+
 
 class Tag(models.Model):
     name = models.CharField(max_length=50)
 
+    def __str__(self):
+        return self.name
+
 
 class Keyword(models.Model):
     name = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.name
 
 
 class Post(models.Model):
@@ -23,9 +32,11 @@ class Post(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name='post_author', on_delete=models.CASCADE)
     category = models.ForeignKey(
-        Category, related_name='post_category', on_delete=models.SET_NULL, null=True)
-    tags = models.ManyToManyField(Tag, related_name='post_tag')
-    keywords = models.ManyToManyField(Keyword, related_name='post_keyword')
+        Category, related_name='post_category', on_delete=models.SET_NULL, blank=True, null=True)
+    tags = models.ManyToManyField(
+        Tag, related_name='post_tag', blank=True, null=True)
+    keywords = models.ManyToManyField(
+        Keyword, related_name='post_keyword', blank=True, null=True)
     slug = models.SlugField(max_length=250, blank=True, null=True)
 
     def __str__(self):
