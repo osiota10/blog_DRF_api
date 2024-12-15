@@ -51,11 +51,11 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class PostSerializer(serializers.ModelSerializer):
-    post_category = CategorySerializer()
+    category = CategorySerializer()
     comments = CommentSerializer()
-    post_tag = TagSerializer(many=True)
-    post_keyword = KeywordSerializer(many=True)
-    post_author = UserInfoSerializer()
+    tags = TagSerializer(many=True)
+    keywords = KeywordSerializer(many=True)
+    author = UserInfoSerializer()
 
     class Meta:
         model = Post
