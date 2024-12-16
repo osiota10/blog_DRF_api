@@ -1,1 +1,1 @@
-django-drf-blog-api
+django_drf_blog_api
