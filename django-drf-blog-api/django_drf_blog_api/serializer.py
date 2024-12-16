@@ -52,15 +52,14 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     category = CategorySerializer()
-    comments = CommentSerializer()
     tags = TagSerializer(many=True)
     keywords = KeywordSerializer(many=True)
     author = UserInfoSerializer()
 
     class Meta:
         model = Post
-        fields = ('id', 'content', 'pub_date', 'slug', 'post_category',
-                  'post_tag', 'post_keyword', 'comments', 'post_author')
+        fields = ('id', 'title', 'content', 'pub_date', 'slug', 'category',
+                  'tags', 'keywords', 'author')
 
 
 class LikeSerializer(serializers.ModelSerializer):

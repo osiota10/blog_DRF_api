@@ -6,4 +6,4 @@ class BlogConfig(AppConfig):
     name = 'django_drf_blog_api'
 
     def ready(self):
-        pass
+        import django_drf_blog_api.signals
