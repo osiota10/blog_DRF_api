@@ -84,6 +84,25 @@ class PostView(APIView):  # Authors
         except Post.DoesNotExist:
             return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
 
+class CommentListView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        # Get the post_id from query parameters
+        post_id = request.GET.get('post_id')
+        if not post_id:
+            return Response({"error": "Missing 'post_id' query parameter."}, status=400)
+
+        # Validate if the post exists
+        try:
+            post = Post.objects.get(id=post_id)
+        except Post.DoesNotExist:
+            return Response({"error": "Post not found."}, status=404)
+
+        # Fetch comments for the post
+        comments = Comment.objects.filter(post=post, parent=None)
+        serializer = CommentSerializer(comments, many=True)
+        return Response(serializer.data)
 
 class CommentView(APIView):
     permission_classes = [IsAuthenticated,]
@@ -95,7 +114,7 @@ class CommentView(APIView):
             return Response({"error": "Missing 'post_id' query parameter."}, status=400)
 
         comments = Comment.objects.filter(post_id=post_id)
-        serializer = PostSerializer(comments, many=True)
+        serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
