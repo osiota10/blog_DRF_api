@@ -59,7 +59,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'title', 'content', 'pub_date', 'slug', 'category',
-                  'tags', 'keywords', 'author')
+                  'tags', 'keywords', 'author', 'image', 'image_caption')
 
 
 class LikeSerializer(serializers.ModelSerializer):

@@ -107,16 +107,6 @@ class CommentListView(APIView):
 class CommentView(APIView):
     permission_classes = [IsAuthenticated,]
 
-    def get(self, request, *args, **kwargs):
-        # Get the post_id from query parameters
-        post_id = request.GET.get('post_id')
-        if post_id is None:
-            return Response({"error": "Missing 'post_id' query parameter."}, status=400)
-
-        comments = Comment.objects.filter(post_id=post_id)
-        serializer = CommentSerializer(comments, many=True)
-        return Response(serializer.data)
-
     def put(self, request, *args, **kwargs):
         pass
 
@@ -125,7 +115,7 @@ class CommentView(APIView):
         post_id = request.data.get('post')
         parent_comment_id = request.data.get('parent_comment')
 
-        if not comment or not parent_comment_id or not post_id:
+        if not comment or not post_id:
             return Response({'error': 'Comment and Post_ID are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
