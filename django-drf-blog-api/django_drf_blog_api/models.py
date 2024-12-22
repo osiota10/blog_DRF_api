@@ -29,7 +29,7 @@ class Post(models.Model):
     title = models.CharField(max_length=200)
     content = models.TextField()
     image = models.URLField(blank=True, null=True)
-    image_caption = models.CharField(max_length=100, blank=True, null=True)
+    image_caption = models.TextField(blank=True, null=True)
     pub_date = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL, related_name='post_author', on_delete=models.CASCADE)

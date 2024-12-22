@@ -84,6 +84,7 @@ class PostView(APIView):  # Authors
         except Post.DoesNotExist:
             return Response({'error': 'Post not found'}, status=status.HTTP_404_NOT_FOUND)
 
+
 class CommentListView(APIView):
     permission_classes = [AllowAny]
 
@@ -103,6 +104,7 @@ class CommentListView(APIView):
         comments = Comment.objects.filter(post=post, parent=None)
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
+
 
 class CommentView(APIView):
     permission_classes = [IsAuthenticated,]
@@ -139,7 +141,28 @@ class CommentView(APIView):
 
 
 class LikeView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,]
+
+    def get(self, request, *args, **kwargs):
+        content_type = request.query_params.get('content_type')
+        object_id = request.query_params.get('object_id')
+
+        if not content_type or not object_id:
+            return Response({'error': 'content_type and object_id are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            content_type = ContentType.objects.get(model=content_type)
+        except ContentType.DoesNotExist:
+            return Response({'error': 'Invalid content_type.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the user has liked the object
+        liked = Like.objects.filter(
+            user=request.user,
+            content_type=content_type,
+            object_id=object_id
+        ).exists()
+
+        return Response({'liked': liked}, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         content_type = request.data.get('content_type')
@@ -164,3 +187,26 @@ class LikeView(APIView):
         else:
             like.delete()
             return Response({'message': 'Unliked successfully.'}, status=status.HTTP_200_OK)
+
+
+class TotalLikesView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        content_type = request.query_params.get('content_type')
+        object_id = request.query_params.get('object_id')
+
+        if not content_type or not object_id:
+            return Response({'error': 'content_type and object_id are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            content_type = ContentType.objects.get(model=content_type)
+        except ContentType.DoesNotExist:
+            return Response({'error': 'Invalid content_type.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        total_likes = Like.objects.filter(
+            content_type=content_type,
+            object_id=object_id
+        ).count()
+
+        return Response({'total_likes': total_likes}, status=status.HTTP_200_OK)

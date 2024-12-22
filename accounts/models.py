@@ -57,7 +57,7 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(null=True, blank=True)
-    image = CloudinaryField('image', null=True, blank=True)
+    profile_picture = CloudinaryField('image', null=True, blank=True)
     gender = models.CharField(
         max_length=255, null=True, blank=True, choices=GENDER)
     home_address = models.TextField(null=True, blank=True)
@@ -78,12 +78,12 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
         return self.first_name
 
     def get_image_url(self):
-        return (f"https://res.cloudinary.com/dkcjpdk1c/image/upload/{self.image}")
+        return (f"https://res.cloudinary.com/dkcjpdk1c/image/upload/{self.profile_picture}")
 
     @property
     def get_photo_url(self):
-        if self.image and hasattr(self.image, 'url'):
-            return self.image.url
+        if self.profile_picture and hasattr(self.profile_picture, 'url'):
+            return self.profile_picture.url
         else:
             return "https://cdn-icons-png.flaticon.com/512/147/147142.png"
 

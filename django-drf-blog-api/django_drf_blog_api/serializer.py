@@ -16,7 +16,8 @@ user = get_user_model()
 class UserInfoSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = user
-        fields = ('id', 'first_name', 'last_name', 'phone_number', 'email')
+        fields = ('id', 'first_name', 'last_name',
+                  'phone_number', 'email', 'get_image_url', 'get_photo_url', 'profile_picture')
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -55,11 +56,22 @@ class PostSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True)
     keywords = KeywordSerializer(many=True)
     author = UserInfoSerializer()
+    total_comments = serializers.SerializerMethodField()
+    total_likes = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = ('id', 'title', 'content', 'pub_date', 'slug', 'category',
-                  'tags', 'keywords', 'author', 'image', 'image_caption')
+                  'tags', 'keywords', 'author', 'image', 'image_caption', 'total_comments', 'total_likes')
+
+    def get_total_comments(self, obj):
+        # Count the comments related to the post
+        return Comment.objects.filter(post=obj).count()
+
+    def get_total_likes(self, obj):
+        # Count the likes for the post
+        content_type = ContentType.objects.get_for_model(Post)
+        return Like.objects.filter(content_type=content_type, object_id=obj.id).count()
 
 
 class LikeSerializer(serializers.ModelSerializer):
