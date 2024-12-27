@@ -54,6 +54,9 @@ class Comment(models.Model):
         'self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        ordering = ['-created_at'] 
+
     def __str__(self):
         return f"Comment by {self.user} on {self.post} at {self.created_at}"
 
