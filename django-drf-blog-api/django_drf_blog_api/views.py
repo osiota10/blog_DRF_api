@@ -31,6 +31,10 @@ class CategoryView(generics.ListAPIView):
     serializer_class = CategorySerializer
     permission_classes = [AllowAny,]
 
+class TagView(generics.ListAPIView):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    permission_classes = [AllowAny,]
 
 class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
