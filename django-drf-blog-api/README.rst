@@ -15,7 +15,7 @@ django-drf-blog-api is a Django blog API app
         ...,
         "django-drf-blog-api",
     ]
-```
+
 2. Include the polls URLconf in your project urls.py like this::
 
     path("blog/", include("django-drf-blog-api.urls")),
