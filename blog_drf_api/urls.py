@@ -22,4 +22,5 @@ urlpatterns = [
     path('django_drf_blog_api/', include('django_drf_blog_api.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
+    path("ckeditor5/", include('django_ckeditor_5.urls')),
 ]
