@@ -15,11 +15,22 @@ django-drf-blog-api is a Django blog API app
     INSTALLED_APPS = [
         ...,
         "django_drf_blog_api",
+        'django_ckeditor_5',
     ]
     ```
 2. Include the polls URLconf in your project urls.py like this::
 
-    path("blog/", include("django-drf-blog-api.urls")),
+    ```
+    from django.conf import settings
+    from django.conf.urls.static import static
+
+    # [ ... ]
+
+    urlpatterns += [
+        path("blog/", include("django-drf-blog-api.urls")),
+        path("ckeditor5/", include('django_ckeditor_5.urls')),
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    ```
 
 3. Run ``python manage.py migrate`` to create the models.
 
