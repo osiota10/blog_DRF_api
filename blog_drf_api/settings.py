@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_drf_blog_api.apps.ApiConfig',
+    'django-drf-blog-api.django_drf_blog_api',
     'accounts',
     'django_ckeditor_5',
 ]
@@ -179,10 +179,10 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Cloudinary Settings
-cloudinary.config(
-    cloud_name=env('cloud_name'),
-    api_key=env('api_key'),
-    api_secret=env('api_secret')
-)
+# cloudinary.config(
+#     cloud_name=env('cloud_name'),
+#     api_key=env('api_key'),
+#     api_secret=env('api_secret')
+# )
 
 AUTH_USER_MODEL = 'accounts.UserAccount'

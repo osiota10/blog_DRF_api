@@ -44,6 +44,9 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+    
+    def safe_post_content_html(self):
+        return strip_tags(self.content)
 
 
 class Comment(models.Model):
