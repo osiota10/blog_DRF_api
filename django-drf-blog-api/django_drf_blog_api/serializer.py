@@ -62,7 +62,7 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = ('id', 'title', 'content', 'pub_date', 'slug', 'category',
-                  'tags', 'keywords', 'author', 'image', 'image_caption', 'total_comments', 'total_likes')
+                  'tags', 'keywords', 'author', 'image', 'image_caption', 'total_comments', 'total_likes', 'safe_post_content_html')
 
     def get_total_comments(self, obj):
         # Count the comments related to the post

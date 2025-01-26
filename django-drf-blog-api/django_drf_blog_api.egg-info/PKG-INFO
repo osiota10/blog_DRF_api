@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: django-drf-blog-api
-Version: 0.1.4
+Version: 0.1.5
 Summary: A Django app blog API endpoints.
 Home-page: https://github.com/osiota10/blog_DRF_api
 Author: Osiota Samuel Obrozie

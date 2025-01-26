@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django_ckeditor_5.fields import CKEditor5Field
+from django.utils.html import strip_tags
 
 
 class Category(models.Model):
@@ -44,7 +45,7 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
-    
+
     def safe_post_content_html(self):
         return strip_tags(self.content)
 
