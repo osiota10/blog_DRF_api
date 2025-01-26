@@ -26,8 +26,9 @@ django-drf-blog-api is a Django blog API app
 
     # [ ... ]
 
+    path("blog/", include("django-drf-blog-api.urls")),
+
     urlpatterns += [
-        path("blog/", include("django-drf-blog-api.urls")),
         path("ckeditor5/", include('django_ckeditor_5.urls')),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     ```
