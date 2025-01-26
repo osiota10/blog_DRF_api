@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_drf_blog_api.apps.ApiConfig',
     'accounts',
+    'django_ckeditor_5',
 ]
 
 MIDDLEWARE = [
