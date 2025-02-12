@@ -90,3 +90,9 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = ('id', 'title', 'safe_body_html',
                   'get_image_url', 'event_date', 'slug')
+
+
+class HeroSectionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HeroSection
+        fields = ('id', 'title', 'description', 'get_image_url')

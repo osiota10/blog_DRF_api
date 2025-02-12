@@ -97,3 +97,9 @@ class EventDetail(generics.RetrieveAPIView):
     serializer_class = EventSerializer
     queryset = Event.objects.all()
     permission_classes = [AllowAny,]
+
+
+class HeroSectionView(generics.ListAPIView):
+    queryset = HeroSection.objects.all()
+    serializer_class = HeroSectionSerializer
+    permission_classes = [AllowAny,]
