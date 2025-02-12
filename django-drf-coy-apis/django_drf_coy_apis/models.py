@@ -21,15 +21,21 @@ class CompanyInfo(models.Model):
         RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')])
     email = models.EmailField(null=True, blank=True)
     about_company = RichTextField(blank=True, null=True)
+    about_company_img = CloudinaryField(null=True, blank=True)
     return_policy = RichTextField(blank=True, null=True)
     term_and_conditions = RichTextField(blank=True, null=True)
     privacy_policy = RichTextField(blank=True, null=True)
-    testimonial_frame = CloudinaryField(null=True, blank=True)
-    career_benefits = RichTextField(null=True, blank=True)
+    ceo_statment = RichTextField(null=True, blank=True)
+    ceo_img = CloudinaryField(null=True, blank=True)
 
     def get_logo(self):
         return f"{cloudinary_url}{self.logo}"
 
+    def get_about_img(self):
+        return f"{cloudinary_url}{self.about_company_img}"
+
+    def get_ceo_img(self):
+            return f"{cloudinary_url}{self.ceo_img}"
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=50)

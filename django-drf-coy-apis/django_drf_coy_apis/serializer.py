@@ -75,7 +75,7 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
         fields = ('id', 'company_name', 'company_address', 'telephone', 'telephone_2',
                   'email', 'about_company', 'return_policy', 'term_and_conditions',
                   'privacy_policy', 'company_social', 'company_faqs', 'get_page_header_image',
-                  'get_logo', 'get_testimonial_frame', 'career_benefits')
+                  'get_logo', 'ceo_statment')
 
 
 class CoreValueSerializer(serializers.ModelSerializer):
