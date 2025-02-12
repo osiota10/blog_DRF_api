@@ -75,7 +75,7 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
         fields = ('id', 'company_name', 'company_address', 'telephone', 'telephone_2',
                   'email', 'about_company', 'return_policy', 'term_and_conditions',
                   'privacy_policy', 'company_social', 'company_faqs', 'get_page_header_image',
-                  'get_logo', 'ceo_statment')
+                  'get_logo', 'ceo_statment', 'get_about_img', 'get_ceo_img')
 
 
 class CoreValueSerializer(serializers.ModelSerializer):
@@ -96,3 +96,15 @@ class HeroSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = HeroSection
         fields = ('id', 'title', 'description', 'get_image_url')
+
+
+class YouTubeVideoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = YouTubeVideo
+        fields = '__all__'
+
+
+class PhotoGallerySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HeroSection
+        fields = ('id', 'title', 'get_photo_url')

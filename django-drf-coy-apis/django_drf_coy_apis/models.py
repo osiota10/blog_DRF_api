@@ -35,7 +35,8 @@ class CompanyInfo(models.Model):
         return f"{cloudinary_url}{self.about_company_img}"
 
     def get_ceo_img(self):
-            return f"{cloudinary_url}{self.ceo_img}"
+        return f"{cloudinary_url}{self.ceo_img}"
+
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=50)
@@ -241,3 +242,45 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.title}"
+
+
+class YouTubeVideo(models.Model):
+    title = models.CharField(max_length=255, help_text="Title of the video")
+    description = models.TextField(
+        blank=True, help_text="Optional video description")
+    video_url = models.URLField(help_text="URL of the YouTube video")
+    embed_code = models.TextField(
+        blank=True, help_text="Optional HTML embed code for the video")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+    def get_embed_url(self):
+        """
+        If embed_code is not provided, this method attempts to generate
+        the YouTube embed URL from the video_url.
+        Example: https://www.youtube.com/watch?v=VIDEO_ID becomes
+        https://www.youtube.com/embed/VIDEO_ID
+        """
+        import re
+        # Regex to extract the video ID from various YouTube URL formats.
+        pattern = re.compile(
+            r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+        )
+        match = pattern.search(self.video_url)
+        if match:
+            video_id = match.group(1)
+            return f'https://www.youtube.com/embed/{video_id}'
+        return self.video_url  # fallback if not matched
+
+
+class PhotoGallery(models.Model):
+    title = models.CharField(max_length=50)
+    photo = CloudinaryField()
+
+    def __str__(self):
+        return f"{self.title}"
+
+    def get_photo_url(self):
+        return f"{cloudinary_url}{self.photo}"

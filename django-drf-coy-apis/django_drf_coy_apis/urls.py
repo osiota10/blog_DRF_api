@@ -15,4 +15,6 @@ urlpatterns = [
     path('events/<slug:slug>', EventDetail.as_view()),
     path('hero-section', HeroSectionView.as_view()),
     path('stat', StatView.as_view()),
+    path('youtube-videos', YouTubeVideoView.as_view()),
+    path('photo-gallery', PhotoGalleryView.as_view()),
 ]

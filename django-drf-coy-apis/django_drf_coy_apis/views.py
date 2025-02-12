@@ -109,3 +109,15 @@ class StatView(generics.ListAPIView):
     queryset = Stat.objects.all()
     serializer_class = StatSerializer
     permission_classes = [AllowAny,]
+
+
+class YouTubeVideoView(generics.ListAPIView):
+    queryset = YouTubeVideo.objects.all()
+    serializer_class = YouTubeVideoSerializer
+    permission_classes = [AllowAny,]
+
+
+class PhotoGalleryView(generics.ListAPIView):
+    queryset = PhotoGallery.objects.all()
+    serializer_class = PhotoGallerySerializer
+    permission_classes = [AllowAny,]
