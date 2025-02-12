@@ -103,3 +103,9 @@ class HeroSectionView(generics.ListAPIView):
     queryset = HeroSection.objects.all()
     serializer_class = HeroSectionSerializer
     permission_classes = [AllowAny,]
+
+
+class StatView(generics.ListAPIView):
+    queryset = Stat.objects.all()
+    serializer_class = StatSerializer
+    permission_classes = [AllowAny,]

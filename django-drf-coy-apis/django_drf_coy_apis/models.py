@@ -137,7 +137,7 @@ class Stat(models.Model):
     stat_title = models.CharField(max_length=50)
 
     def __str__(self):
-        return f"{self.stat_title} - N{self.stat_figure}"
+        return f"{self.stat_title} - {self.stat_figure}"
 
 
 class Testimonial(models.Model):

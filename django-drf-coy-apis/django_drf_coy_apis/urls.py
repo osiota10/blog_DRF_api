@@ -14,4 +14,5 @@ urlpatterns = [
     path('events', EventView.as_view()),
     path('events/<slug:slug>', EventDetail.as_view()),
     path('hero-section', HeroSectionView.as_view()),
+    path('stat', StatView.as_view()),
 ]

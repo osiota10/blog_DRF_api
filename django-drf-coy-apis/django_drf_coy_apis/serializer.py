@@ -45,7 +45,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ('id', 'title', 'description', 'image', 'slug', 'category',
-                  'get_image_url', 'faqs', 'safe_description_html', 'hero_snippet', 'get_hero_image_url')
+                  'get_image_url', 'faqs', 'safe_description_html')
 
 
 class TestimonialSerializer(serializers.ModelSerializer):
