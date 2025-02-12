@@ -11,4 +11,6 @@ urlpatterns = [
     path('our-teams', OurTeamView.as_view()),
     path('company-info/<int:id>', CompanyInfoView.as_view()),
     path('core-values', CoeValueView.as_view()),
+    path('events', EventView.as_view()),
+    path('events/<slug:slug>', EventDetail.as_view()),
 ]

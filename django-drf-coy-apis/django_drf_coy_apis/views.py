@@ -84,3 +84,16 @@ class CoeValueView(generics.ListAPIView):
     def get_queryset(self):
         query = CoreValue.objects.all()
         return query
+
+
+class EventView(generics.ListAPIView):
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
+    permission_classes = [AllowAny,]
+
+
+class EventDetail(generics.RetrieveAPIView):
+    lookup_field = 'slug'
+    serializer_class = EventSerializer
+    queryset = Event.objects.all()
+    permission_classes = [AllowAny,]

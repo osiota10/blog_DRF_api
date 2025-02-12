@@ -217,3 +217,21 @@ class HeroSection(models.Model):
 
     def __str__(self):
         return f"{self.title}"
+
+
+class Event(models.Model):
+    date_added = models.DateField(auto_now_add=True)
+    image = CloudinaryField('image')
+    title = models.CharField(max_length=32)
+    body = RichTextField()
+    event_date = models.DateField()
+    slug = models.SlugField(max_length=250, blank=True, null=True)
+
+    def safe_body_html(self):
+        return strip_tags(self.body)
+
+    def get_image_url(self):
+        return f"{cloudinary_url}{self.image}"
+
+    def __str__(self):
+        return f"{self.title}"

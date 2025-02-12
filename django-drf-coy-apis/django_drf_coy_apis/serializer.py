@@ -83,3 +83,10 @@ class CoreValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoreValue
         fields = ('id', 'title', 'description', 'pic_url')
+
+
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = ('id', 'title', 'safe_body_html',
+                  'get_image_url', 'event_date', 'slug')
