@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: django-drf-coy-apis
-Version: 0.0.3
+Version: 0.0.4
 Summary: A Django app Company Info API endpoints.
 Home-page: https://github.com/osiota10/blog_DRF_api
 Author: Osiota Samuel Obrozie
