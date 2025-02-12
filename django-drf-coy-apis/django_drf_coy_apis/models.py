@@ -30,10 +30,6 @@ class CompanyInfo(models.Model):
     def get_logo(self):
         return f"{cloudinary_url}{self.logo}"
 
-    def get_testimonial_frame(self):
-        return f"{cloudinary_url}{self.testimonial_frame}"
-
-
 
 class ServiceCategory(models.Model):
     name = models.CharField(max_length=50)
@@ -46,9 +42,7 @@ class Service(models.Model):
     title = models.CharField(max_length=50)
     description = RichTextField()
     image = CloudinaryField()
-    hero_image = CloudinaryField(blank=True, null=True)
-    hero_snippet = models.TextField(blank=True, null=True)
-    category = models.ManyToManyField(ServiceCategory)
+    category = models.ManyToManyField(ServiceCategory, blank=True, null=True)
     slug = models.SlugField(max_length=250, blank=True, null=True)
 
     def __str__(self):
@@ -57,11 +51,9 @@ class Service(models.Model):
     def get_image_url(self):
         return f"{cloudinary_url}{self.image}"
 
-    def get_hero_image_url(self):
-        return f"{cloudinary_url}{self.hero_image}"
-
     def safe_description_html(self):
         return strip_tags(self.description)
+
 
 class ProductCategory(models.Model):
     name = models.CharField(max_length=50)
@@ -118,7 +110,6 @@ class EmailSubcription(models.Model):
         verbose_name_plural = "Email Subcriptions"
 
 
-
 class OurClient(models.Model):
     name_of_client = models.CharField(max_length=50)
     logo = CloudinaryField()
@@ -142,8 +133,6 @@ class OurSponsor(models.Model):
 
 
 class Stat(models.Model):
-    service = models.ForeignKey(
-        Service, on_delete=models.CASCADE, related_name='stats')
     stat_figure = models.IntegerField()
     stat_title = models.CharField(max_length=50)
 
@@ -164,7 +153,6 @@ class Testimonial(models.Model):
         return f"{cloudinary_url}{self.image}"
 
 
-
 class OurTeam(models.Model):
     name = models.CharField(max_length=50)
     position = models.CharField(max_length=50)
@@ -178,8 +166,6 @@ class OurTeam(models.Model):
 
 
 class SocialUrl(models.Model):
-    team_member = models.OneToOneField(
-        OurTeam, related_name='team_social', on_delete=models.CASCADE, blank=True, null=True)
     company = models.OneToOneField(
         CompanyInfo, related_name='company_social', on_delete=models.CASCADE, blank=True, null=True)
     facebook_url = models.URLField(blank=True, null=True)
@@ -191,12 +177,7 @@ class SocialUrl(models.Model):
     whatsapp_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.team_member} {self.company} Social URLs"
-
-    def clean(self):
-        if self.team_member and self.company:
-            raise ValidationError(
-                "Only one of team_member and company can be selected.")
+        return f"{self.company} Social URLs"
 
 
 class FAQ(models.Model):
@@ -221,6 +202,18 @@ class CoreValue(models.Model):
         default='https://img.freepik.com/premium-photo/compass-with-arrow-marks-word-mission_207634-2241.jpg?size=626&ext=jpg&ga=GA1.1.1699289041.1668069491&semt=ais')
     title = models.CharField(max_length=50)
     description = RichTextField()
+
+    def __str__(self):
+        return f"{self.title}"
+
+
+class HeroSection(models.Model):
+    title = models.CharField(max_length=50)
+    description = RichTextField()
+    image = CloudinaryField()
+
+    def get_image_url(self):
+        return f"{cloudinary_url}{self.image}"
 
     def __str__(self):
         return f"{self.title}"

@@ -40,13 +40,12 @@ class FaqSerializer(serializers.ModelSerializer):
 
 class ServiceSerializer(serializers.ModelSerializer):
     category = ServiceCategorySerializer(many=True)
-    stats = StatSerializer(many=True)
     faqs = FaqSerializer(many=True)
 
     class Meta:
         model = Service
         fields = ('id', 'title', 'description', 'image', 'slug', 'category',
-                  'get_image_url', 'stats', 'faqs', 'safe_description_html', 'hero_snippet', 'get_hero_image_url')
+                  'get_image_url', 'faqs', 'safe_description_html', 'hero_snippet', 'get_hero_image_url')
 
 
 class TestimonialSerializer(serializers.ModelSerializer):
@@ -62,11 +61,9 @@ class SocialUrlSerializer(serializers.ModelSerializer):
 
 
 class OurTeamSerializer(serializers.ModelSerializer):
-    team_social = SocialUrlSerializer()
-
     class Meta:
         model = OurTeam
-        fields = ('id', 'name', 'position', 'get_image_url', 'team_social')
+        fields = ('id', 'name', 'position', 'get_image_url')
 
 
 class CompanyInfoSerializer(serializers.ModelSerializer):
@@ -86,4 +83,3 @@ class CoreValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = CoreValue
         fields = ('id', 'title', 'description', 'pic_url')
-
