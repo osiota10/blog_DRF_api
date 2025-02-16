@@ -281,9 +281,13 @@ class YouTubeVideo(models.Model):
 class PhotoGallery(models.Model):
     title = models.CharField(max_length=50)
     photo = CloudinaryField()
+    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
 
     def __str__(self):
         return f"{self.title}"
+
+    class Meta:
+        ordering = ['-created_at']
 
     def get_photo_url(self):
         return f"{cloudinary_url}{self.photo}"
