@@ -256,6 +256,9 @@ class YouTubeVideo(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        ordering = ['-created_at']
+
     def get_embed_url(self):
         """
         If embed_code is not provided, this method attempts to generate
