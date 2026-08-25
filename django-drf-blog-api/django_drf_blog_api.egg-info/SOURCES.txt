@@ -21,4 +21,7 @@ django_drf_blog_api.egg-info/requires.txt
 django_drf_blog_api.egg-info/top_level.txt
 django_drf_blog_api/migrations/0001_initial.py
 django_drf_blog_api/migrations/0002_post_excerpt_post_read_time_author_alter_post_author.py
+django_drf_blog_api/migrations/0003_remove_post_image_post_featured_image_url_and_more.py
+django_drf_blog_api/migrations/0004_remove_post_image_caption_and_more.py
+django_drf_blog_api/migrations/0005_post_updated_at.py
 django_drf_blog_api/migrations/__init__.py

@@ -74,4 +74,4 @@ class MediaAsset(models.Model):
         return self.file.build_url(width=300, crop='fill', fetch_format='auto', quality='auto')
 
     def __str__(self):
-        return self.title or self.url or f"{self.get_media_type_display()} #{self.id}"
+        return self.title or self.url

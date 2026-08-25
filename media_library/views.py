@@ -60,3 +60,31 @@ class MediaAssetDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = MediaAsset.objects.all()
     serializer_class = MediaAssetSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+from django.http import JsonResponse
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+
+
+class CKEditor5MediaUploadView(APIView):
+    """
+    Custom upload handler for CKEditor 5.
+    Uploads inline content images to Cloudinary and registers them in media_library as MediaAsset.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        upload_file = request.FILES.get('upload')
+        if not upload_file:
+            return JsonResponse({'error': {'message': 'No file uploaded.'}}, status=400)
+
+        user = request.user if (request.user and request.user.is_authenticated) else None
+        media_asset = MediaAsset.objects.create(
+            title=upload_file.name,
+            media_type=MediaAsset.MediaType.IMAGE,
+            file=upload_file,
+            uploaded_by=user
+        )
+
+        return JsonResponse({'url': media_asset.url})

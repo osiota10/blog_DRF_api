@@ -19,12 +19,15 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+from media_library.views import CKEditor5MediaUploadView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('django_drf_blog_api/', include('django_drf_blog_api.urls')),
     path('media-library/', include('media_library.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),
+    path('ckeditor5/image_upload/', CKEditor5MediaUploadView.as_view(), name='ck_editor_5_upload_file'),
     path("ckeditor5/", include('django_ckeditor_5.urls')),
 ]
 

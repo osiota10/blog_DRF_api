@@ -41,11 +41,25 @@ class Post(models.Model):
     content = CKEditor5Field('Text', config_name='extends')
     excerpt = models.TextField(blank=True, null=True, help_text="Short summary of the post")
     read_time = models.PositiveIntegerField(default=0, help_text="Estimated read time in minutes")
-    image = models.URLField(blank=True, null=True)
-    image_caption = models.TextField(blank=True, null=True)
+    featured_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, blank=True, null=True, related_name='featured_posts',
+        help_text="Linked MediaAsset from media_library"
+    )
+    featured_image_url = models.URLField(blank=True, null=True, help_text="Direct URL to external featured image")
+    featured_image_url_caption = models.TextField(
+        blank=True, null=True, help_text="Caption or credit text for the featured image"
+    )
     pub_date = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(
         Author, related_name='posts', on_delete=models.CASCADE, null=True, blank=True)
+
+    @property
+    def featured_image(self):
+        """Returns the media asset URL if available, otherwise external image URL."""
+        if self.featured_media:
+            return self.featured_media.url
+        return self.featured_image_url
     category = models.ForeignKey(
         Category, related_name='post_category', on_delete=models.SET_NULL, blank=True, null=True)
     tags = models.ManyToManyField(

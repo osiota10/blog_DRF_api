@@ -6,6 +6,10 @@ from django.contrib.auth import get_user_model
 user = get_user_model()
 
 
+from media_library.serializers import MediaAssetSerializer
+from media_library.models import MediaAsset
+
+
 class UserInfoSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
         model = user
@@ -57,6 +61,11 @@ class PostSerializer(serializers.ModelSerializer):
     tags = TagSerializer(many=True, read_only=True)
     keywords = KeywordSerializer(many=True, read_only=True)
     author = AuthorSerializer(read_only=True)
+    featured_media = MediaAssetSerializer(read_only=True)
+    featured_media_id = serializers.PrimaryKeyRelatedField(
+        queryset=MediaAsset.objects.all(), source='featured_media', write_only=True, required=False, allow_null=True
+    )
+    featured_image = serializers.ReadOnlyField()
     readTime = serializers.IntegerField(source='read_time', read_only=True)
     total_comments = serializers.SerializerMethodField()
     total_likes = serializers.SerializerMethodField()
@@ -71,13 +80,17 @@ class PostSerializer(serializers.ModelSerializer):
             'read_time',
             'readTime',
             'pub_date',
+            'updated_at',
             'slug',
             'category',
             'tags',
             'keywords',
             'author',
-            'image',
-            'image_caption',
+            'featured_media',
+            'featured_media_id',
+            'featured_image_url',
+            'featured_image_url_caption',
+            'featured_image',
             'total_comments',
             'total_likes',
             'safe_post_content_html')

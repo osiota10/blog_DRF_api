@@ -36,6 +36,9 @@ class TagView(generics.ListAPIView):
     serializer_class = TagSerializer
     permission_classes = [AllowAny,]
 
+from media_library.models import MediaAsset
+
+
 class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
 
@@ -59,11 +62,25 @@ class PostView(APIView):  # Authors
         content = request.data.get('content', post.content)
         excerpt = request.data.get('excerpt', post.excerpt)
         read_time = request.data.get('read_time') or request.data.get('readTime') or post.read_time
+        featured_media_id = request.data.get('featured_media_id') or request.data.get('featured_media')
+        featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
+
+        featured_image_url_caption = request.data.get('featured_image_url_caption', post.featured_image_url_caption)
+
+        if featured_media_id:
+            try:
+                post.featured_media = MediaAsset.objects.get(id=featured_media_id)
+            except MediaAsset.DoesNotExist:
+                pass
+        elif featured_image_url:
+            post.featured_image_url = featured_image_url
+            post.featured_media = None
 
         post.title = title
         post.content = content
         post.excerpt = excerpt
         post.read_time = read_time
+        post.featured_image_url_caption = featured_image_url_caption
         post.save()
 
         serializer = PostSerializer(post)
@@ -75,6 +92,9 @@ class PostView(APIView):  # Authors
         category_id = request.data.get('category')
         excerpt = request.data.get('excerpt', '')
         read_time = request.data.get('read_time') or request.data.get('readTime') or 0
+        featured_media_id = request.data.get('featured_media_id') or request.data.get('featured_media')
+        featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
+        featured_image_url_caption = request.data.get('featured_image_url_caption', '')
 
         if not title or not content or not category_id:
             return Response({'error': 'Title, Content and Category are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -82,9 +102,19 @@ class PostView(APIView):  # Authors
         try:
             category = Category.objects.get(id=category_id) if isinstance(category_id, int) else Category.objects.get(name=category_id)
             author_profile, _ = Author.objects.get_or_create(user=request.user)
+
+            featured_media = None
+            if featured_media_id:
+                try:
+                    featured_media = MediaAsset.objects.get(id=featured_media_id)
+                except MediaAsset.DoesNotExist:
+                    pass
+
             post = Post.objects.create(
                 author=author_profile, title=title, content=content, category=category,
-                excerpt=excerpt, read_time=read_time)
+                excerpt=excerpt, read_time=read_time, featured_media=featured_media,
+                featured_image_url=featured_image_url if not featured_media else None,
+                featured_image_url_caption=featured_image_url_caption)
 
             serializer = PostSerializer(post)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
