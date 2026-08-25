@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_drf_blog_api',
     'accounts',
+    'media_library',
     'django_ckeditor_5',
 ]
 
