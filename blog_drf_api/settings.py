@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django-drf-blog-api.django_drf_blog_api',
+    'django_drf_blog_api',
     'accounts',
     'django_ckeditor_5',
 ]

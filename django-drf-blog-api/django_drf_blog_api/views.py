@@ -40,7 +40,7 @@ class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
-        posts = Post.objects.filter(user=self.request.user)
+        posts = Post.objects.filter(author=self.request.user)
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
@@ -49,7 +49,7 @@ class PostView(APIView):  # Authors
 
         try:
             post = Post.objects.get(
-                id=post_id, user=self.request.user)
+                id=post_id, author=self.request.user)
         except Post.DoesNotExist:
             return Response({'error': 'Post not found.'}, status=404)
 
@@ -63,16 +63,15 @@ class PostView(APIView):  # Authors
     def post(self, request, *args, **kwargs):
         title = request.data.get('title')
         content = request.data.get('content')
-        category = request.data.get('category')
-        tags = request.data.get('tags')
-        keywords = request.data.get('keywords')
+        category_id = request.data.get('category')
 
-        if not title or not content or not category:
+        if not title or not content or not category_id:
             return Response({'error': 'Title, Content and Category are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            category = Category.objects.get(id=category_id) if isinstance(category_id, int) else Category.objects.get(name=category_id)
             post = Post.objects.create(
-                user=request.user, title=title, content=content, category=category, tags=tags, keywords=keywords)
+                author=request.user, title=title, content=content, category=category)
 
             serializer = PostSerializer(post)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -38,9 +38,9 @@ class Post(models.Model):
     category = models.ForeignKey(
         Category, related_name='post_category', on_delete=models.SET_NULL, blank=True, null=True)
     tags = models.ManyToManyField(
-        Tag, related_name='post_tag', blank=True, null=True)
+        Tag, related_name='post_tag', blank=True)
     keywords = models.ManyToManyField(
-        Keyword, related_name='post_keyword', blank=True, null=True)
+        Keyword, related_name='post_keyword', blank=True)
     slug = models.SlugField(max_length=250, blank=True, null=True)
 
     def __str__(self):
