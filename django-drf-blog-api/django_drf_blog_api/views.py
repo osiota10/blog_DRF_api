@@ -15,7 +15,7 @@ from django.contrib.contenttypes.models import ContentType
 
 class PostListView(generics.ListAPIView):  # Public users
     serializer_class = PostSerializer
-    queryset = Post.objects.all()
+    queryset = Post.objects.all().order_by('-pub_date')
     permission_classes = [AllowAny,]
 
 
@@ -57,7 +57,7 @@ class PostView(APIView):  # Authors
 
     def get(self, request, *args, **kwargs):
         author_profile, _ = Author.objects.get_or_create(user=self.request.user)
-        posts = Post.objects.filter(author=author_profile)
+        posts = Post.objects.filter(author=author_profile).order_by('-pub_date')
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 

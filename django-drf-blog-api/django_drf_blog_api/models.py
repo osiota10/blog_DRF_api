@@ -111,6 +111,9 @@ class Post(models.Model):
     def safe_post_content_html(self):
         return strip_tags(self.content)
 
+    class Meta:
+        ordering = ['-pub_date']
+
 
 class Comment(models.Model):
     post = models.ForeignKey(Post, on_delete=models.CASCADE)
