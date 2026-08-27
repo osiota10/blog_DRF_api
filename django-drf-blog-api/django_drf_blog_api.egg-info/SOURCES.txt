@@ -26,4 +26,5 @@ django_drf_blog_api/migrations/0004_remove_post_image_caption_and_more.py
 django_drf_blog_api/migrations/0005_post_updated_at.py
 django_drf_blog_api/migrations/0006_magazineseries_post_magazine_series.py
 django_drf_blog_api/migrations/0007_alter_post_pub_date.py
+django_drf_blog_api/migrations/0008_alter_post_options_author_bio.py
 django_drf_blog_api/migrations/__init__.py

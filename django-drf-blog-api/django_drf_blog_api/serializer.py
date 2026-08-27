@@ -53,7 +53,7 @@ class AuthorSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Author
-        fields = ('id', 'user', 'role')
+        fields = ('id', 'user', 'role', 'bio')
 
 
 class MagazineSeriesSerializer(serializers.ModelSerializer):

@@ -32,6 +32,7 @@ class Author(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='author_profile')
     role = models.CharField(max_length=100, default='Author', blank=True, null=True)
+    bio = models.TextField(blank=True, null=True, help_text="Short author biography")
 
     def __str__(self):
         return f"{self.user} ({self.role})"
