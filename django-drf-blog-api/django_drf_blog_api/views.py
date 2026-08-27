@@ -5,7 +5,7 @@ from .serializer import *
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.authtoken.serializers import AuthTokenSerializer
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission, SAFE_METHODS
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from djoser.views import UserViewSet
 from rest_framework.views import APIView
@@ -52,28 +52,85 @@ class MagazineSeriesDetailView(generics.RetrieveAPIView):  # Public
     permission_classes = [AllowAny]
 
 
-class AuthorListView(generics.ListAPIView):  # Public list of authors
+class IsSuperAdminOrOwnerOrReadOnly(BasePermission):
+    """
+    Custom permission for Author views:
+    - GET, HEAD, OPTIONS: Public (AllowAny).
+    - Write (POST, PUT, PATCH, DELETE):
+        - Superusers (is_superuser / is_staff): Full CRUD control over any author.
+        - Authenticated users: Allowed to update/edit their own profile.
+    """
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return request.user and request.user.is_authenticated
+
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return True
+        if request.user.is_superuser or request.user.is_staff:
+            return True
+        return obj.user == request.user
+
+
+class AuthorListView(generics.ListCreateAPIView):  # Public GET list; Superadmin/Owner POST create
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsSuperAdminOrOwnerOrReadOnly]
+
+    def perform_create(self, serializer):
+        user_id = self.request.data.get('user_id') or self.request.data.get('user')
+        if self.request.user.is_superuser and user_id:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_obj = User.objects.get(id=user_id)
+            serializer.save(user=user_obj)
+        else:
+            serializer.save(user=self.request.user)
 
 
-class AuthorDetailView(generics.RetrieveAPIView):  # Public author detail
+class AuthorDetailView(generics.RetrieveUpdateDestroyAPIView):  # Public GET; Owner or SuperAdmin PUT/PATCH/DELETE
     queryset = Author.objects.all()
     serializer_class = AuthorSerializer
+    permission_classes = [IsSuperAdminOrOwnerOrReadOnly]
+
+
+class AuthorView(APIView):  # Profile Endpoint (Public GET / Authenticated Owner or SuperAdmin PUT/POST/DELETE)
     permission_classes = [AllowAny]
-
-
-class AuthorView(APIView):  # Authenticated author profile CRUD
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        author_profile, _ = Author.objects.get_or_create(user=request.user)
-        serializer = AuthorSerializer(author_profile)
+        author_id = request.query_params.get('id') or request.query_params.get('pk')
+        if author_id:
+            try:
+                author_profile = Author.objects.get(id=author_id)
+                serializer = AuthorSerializer(author_profile)
+                return Response(serializer.data)
+            except Author.DoesNotExist:
+                return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user and request.user.is_authenticated:
+            author_profile, _ = Author.objects.get_or_create(user=request.user)
+            serializer = AuthorSerializer(author_profile)
+            return Response(serializer.data)
+
+        authors = Author.objects.all()
+        serializer = AuthorSerializer(authors, many=True)
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        author_profile, created = Author.objects.get_or_create(user=request.user)
+        if not (request.user and request.user.is_authenticated):
+            return Response({'error': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        author_id = request.data.get('id') or request.data.get('author_id')
+        if request.user.is_superuser and author_id:
+            try:
+                author_profile = Author.objects.get(id=author_id)
+            except Author.DoesNotExist:
+                return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+            created = False
+        else:
+            author_profile, created = Author.objects.get_or_create(user=request.user)
+
         role = request.data.get('role', author_profile.role)
         bio = request.data.get('bio', author_profile.bio)
 
@@ -88,12 +145,23 @@ class AuthorView(APIView):  # Authenticated author profile CRUD
         return self.post(request, *args, **kwargs)
 
     def delete(self, request, *args, **kwargs):
-        try:
-            author_profile = Author.objects.get(user=request.user)
-            author_profile.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except Author.DoesNotExist:
-            return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not (request.user and request.user.is_authenticated):
+            return Response({'error': 'Authentication required.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        author_id = request.data.get('id') or request.data.get('author_id')
+        if request.user.is_superuser and author_id:
+            try:
+                author_profile = Author.objects.get(id=author_id)
+            except Author.DoesNotExist:
+                return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            try:
+                author_profile = Author.objects.get(user=request.user)
+            except Author.DoesNotExist:
+                return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        author_profile.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PostView(APIView):  # Authors
