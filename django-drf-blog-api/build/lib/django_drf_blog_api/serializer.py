@@ -56,11 +56,44 @@ class AuthorSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'role')
 
 
+class MagazineSeriesSerializer(serializers.ModelSerializer):
+    cover_media = MediaAssetSerializer(read_only=True)
+    cover_media_id = serializers.PrimaryKeyRelatedField(
+        queryset=MediaAsset.objects.all(), source='cover_media', write_only=True, required=False, allow_null=True
+    )
+    cover_image = serializers.ReadOnlyField()
+
+    class Meta:
+        model = MagazineSeries
+        fields = (
+            'id',
+            'series_number',
+            'edition_code',
+            'date',
+            'title',
+            'subtitle',
+            'badge',
+            'cover_media',
+            'cover_media_id',
+            'cover_image_url',
+            'cover_image',
+            'editorial_summary',
+            'lead_stories',
+            'slug',
+            'created_at',
+            'updated_at'
+        )
+
+
 class PostSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     keywords = KeywordSerializer(many=True, read_only=True)
     author = AuthorSerializer(read_only=True)
+    magazine_series = MagazineSeriesSerializer(read_only=True)
+    magazine_series_id = serializers.PrimaryKeyRelatedField(
+        queryset=MagazineSeries.objects.all(), source='magazine_series', write_only=True, required=False, allow_null=True
+    )
     featured_media = MediaAssetSerializer(read_only=True)
     featured_media_id = serializers.PrimaryKeyRelatedField(
         queryset=MediaAsset.objects.all(), source='featured_media', write_only=True, required=False, allow_null=True
@@ -86,6 +119,8 @@ class PostSerializer(serializers.ModelSerializer):
             'tags',
             'keywords',
             'author',
+            'magazine_series',
+            'magazine_series_id',
             'featured_media',
             'featured_media_id',
             'featured_image_url',

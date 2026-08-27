@@ -39,6 +39,19 @@ class TagView(generics.ListAPIView):
 from media_library.models import MediaAsset
 
 
+class MagazineSeriesListView(generics.ListAPIView):  # Public
+    queryset = MagazineSeries.objects.all()
+    serializer_class = MagazineSeriesSerializer
+    permission_classes = [AllowAny]
+
+
+class MagazineSeriesDetailView(generics.RetrieveAPIView):  # Public
+    lookup_field = 'slug'
+    queryset = MagazineSeries.objects.all()
+    serializer_class = MagazineSeriesSerializer
+    permission_classes = [AllowAny]
+
+
 class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
 
@@ -64,8 +77,14 @@ class PostView(APIView):  # Authors
         read_time = request.data.get('read_time') or request.data.get('readTime') or post.read_time
         featured_media_id = request.data.get('featured_media_id') or request.data.get('featured_media')
         featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
-
         featured_image_url_caption = request.data.get('featured_image_url_caption', post.featured_image_url_caption)
+        magazine_series_id = request.data.get('magazine_series_id') or request.data.get('magazine_series')
+
+        if magazine_series_id:
+            try:
+                post.magazine_series = MagazineSeries.objects.get(id=magazine_series_id)
+            except MagazineSeries.DoesNotExist:
+                pass
 
         if featured_media_id:
             try:
@@ -95,6 +114,7 @@ class PostView(APIView):  # Authors
         featured_media_id = request.data.get('featured_media_id') or request.data.get('featured_media')
         featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
         featured_image_url_caption = request.data.get('featured_image_url_caption', '')
+        magazine_series_id = request.data.get('magazine_series_id') or request.data.get('magazine_series')
 
         if not title or not content or not category_id:
             return Response({'error': 'Title, Content and Category are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -110,11 +130,19 @@ class PostView(APIView):  # Authors
                 except MediaAsset.DoesNotExist:
                     pass
 
+            magazine_series = None
+            if magazine_series_id:
+                try:
+                    magazine_series = MagazineSeries.objects.get(id=magazine_series_id)
+                except MagazineSeries.DoesNotExist:
+                    pass
+
             post = Post.objects.create(
                 author=author_profile, title=title, content=content, category=category,
                 excerpt=excerpt, read_time=read_time, featured_media=featured_media,
                 featured_image_url=featured_image_url if not featured_media else None,
-                featured_image_url_caption=featured_image_url_caption)
+                featured_image_url_caption=featured_image_url_caption,
+                magazine_series=magazine_series)
 
             serializer = PostSerializer(post)
             return Response(serializer.data, status=status.HTTP_201_CREATED)

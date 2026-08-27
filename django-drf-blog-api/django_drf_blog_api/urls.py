@@ -7,6 +7,8 @@ urlpatterns = [
     path('tags', TagView.as_view()),
     path('post-list', PostListView.as_view()),
     path('post-list/<slug:slug>', PostDetailView.as_view()),
+    path('magazines', MagazineSeriesListView.as_view()),
+    path('magazines/<slug:slug>', MagazineSeriesDetailView.as_view()),
     path('comment-list', CommentListView.as_view()),
     path('total-likes', TotalLikesView.as_view()),
     # Authorized users Only

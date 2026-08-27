@@ -9,3 +9,4 @@ def slug_generator(sender, instance, *args, **kwargs):
 
 
 pre_save.connect(slug_generator, sender=Post)
+pre_save.connect(slug_generator, sender=MagazineSeries)
