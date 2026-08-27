@@ -9,9 +9,12 @@ urlpatterns = [
     path('post-list/<slug:slug>', PostDetailView.as_view()),
     path('magazines', MagazineSeriesListView.as_view()),
     path('magazines/<slug:slug>', MagazineSeriesDetailView.as_view()),
+    path('authors', AuthorListView.as_view()),
+    path('authors/<int:pk>', AuthorDetailView.as_view()),
     path('comment-list', CommentListView.as_view()),
     path('total-likes', TotalLikesView.as_view()),
     # Authorized users Only
+    path('author', AuthorView.as_view()),
     path('post', PostView.as_view()),  # Authors
     path('comment', CommentView.as_view()),
     path('like', LikeView.as_view()),

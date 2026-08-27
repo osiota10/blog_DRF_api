@@ -52,6 +52,50 @@ class MagazineSeriesDetailView(generics.RetrieveAPIView):  # Public
     permission_classes = [AllowAny]
 
 
+class AuthorListView(generics.ListAPIView):  # Public list of authors
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+    permission_classes = [AllowAny]
+
+
+class AuthorDetailView(generics.RetrieveAPIView):  # Public author detail
+    queryset = Author.objects.all()
+    serializer_class = AuthorSerializer
+    permission_classes = [AllowAny]
+
+
+class AuthorView(APIView):  # Authenticated author profile CRUD
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        author_profile, _ = Author.objects.get_or_create(user=request.user)
+        serializer = AuthorSerializer(author_profile)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        author_profile, created = Author.objects.get_or_create(user=request.user)
+        role = request.data.get('role', author_profile.role)
+        bio = request.data.get('bio', author_profile.bio)
+
+        author_profile.role = role
+        author_profile.bio = bio
+        author_profile.save()
+
+        serializer = AuthorSerializer(author_profile)
+        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        return self.post(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            author_profile = Author.objects.get(user=request.user)
+            author_profile.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Author.DoesNotExist:
+            return Response({'error': 'Author profile not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+
 class PostView(APIView):  # Authors
     permission_classes = [IsAuthenticated,]
 
