@@ -41,6 +41,9 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+import sys
+sys.path.append(os.path.join(BASE_DIR, 'django-drf-coy-apis'))
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -49,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_drf_blog_api',
+    'django_drf_coy_apis',
     'accounts',
     'media_library',
     'django_ckeditor_5',

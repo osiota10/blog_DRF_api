@@ -1,41 +1,68 @@
 from django.db import models
-from ckeditor.fields import RichTextField
-from cloudinary.models import CloudinaryField
+from django_ckeditor_5.fields import CKEditor5Field
 from django.utils.html import strip_tags
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 
-# Create your models here.
-cloudinary_url = "https://res.cloudinary.com/dkcjpdk1c/image/upload/"
-
 
 class CompanyInfo(models.Model):
-    logo = CloudinaryField(null=True, blank=True)
-    get_page_header_image = models.URLField(default="")
+    logo_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_company_logos'
+    )
+    logo_url = models.URLField(null=True, blank=True)
+    get_page_header_image = models.URLField(default="", blank=True)
     company_name = models.CharField(max_length=100, null=True, blank=True)
-    company_address = models.CharField(
-        max_length=255, null=True, blank=True)
-    telephone = models.CharField(max_length=15, validators=[
-        RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')], null=True, blank=True)
-    telephone_2 = models.CharField(max_length=15, null=True, blank=True, validators=[
-        RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')])
+    company_address = models.CharField(max_length=255, null=True, blank=True)
+    telephone = models.CharField(
+        max_length=15, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')], null=True, blank=True
+    )
+    telephone_2 = models.CharField(
+        max_length=15, null=True, blank=True, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')]
+    )
     email = models.EmailField(null=True, blank=True)
-    about_company = RichTextField(blank=True, null=True)
-    about_company_img = CloudinaryField(null=True, blank=True)
-    return_policy = RichTextField(blank=True, null=True)
-    term_and_conditions = RichTextField(blank=True, null=True)
-    privacy_policy = RichTextField(blank=True, null=True)
-    ceo_statment = RichTextField(null=True, blank=True)
-    ceo_img = CloudinaryField(null=True, blank=True)
+    about_company = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    about_company_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_about_images'
+    )
+    about_company_img_url = models.URLField(null=True, blank=True)
+    return_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    term_and_conditions = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    privacy_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    ceo_statment = CKEditor5Field('Text', config_name='extends', null=True, blank=True)
+    ceo_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_ceo_images'
+    )
+    ceo_img_url = models.URLField(null=True, blank=True)
+
+    @property
+    def logo(self):
+        if self.logo_media:
+            return self.logo_media.url
+        return self.logo_url or ""
+
+    @property
+    def about_company_img(self):
+        if self.about_company_media:
+            return self.about_company_media.url
+        return self.about_company_img_url or ""
+
+    @property
+    def ceo_img(self):
+        if self.ceo_media:
+            return self.ceo_media.url
+        return self.ceo_img_url or ""
 
     def get_logo(self):
-        return f"{cloudinary_url}{self.logo}"
+        return self.logo
 
     def get_about_img(self):
-        return f"{cloudinary_url}{self.about_company_img}"
+        return self.about_company_img
 
     def get_ceo_img(self):
-        return f"{cloudinary_url}{self.ceo_img}"
+        return self.ceo_img
+
+    def __str__(self):
+        return self.company_name or "Company Info"
 
 
 class ServiceCategory(models.Model):
@@ -47,19 +74,28 @@ class ServiceCategory(models.Model):
 
 class Service(models.Model):
     title = models.CharField(max_length=50)
-    description = RichTextField()
-    image = CloudinaryField()
-    category = models.ManyToManyField(ServiceCategory, blank=True, null=True)
+    description = CKEditor5Field('Text', config_name='extends')
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_service_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
+    category = models.ManyToManyField(ServiceCategory, blank=True)
     slug = models.SlugField(max_length=250, blank=True, null=True)
 
-    def __str__(self):
-        return f"{self.title}"
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
 
     def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
+        return self.image
 
     def safe_description_html(self):
         return strip_tags(self.description)
+
+    def __str__(self):
+        return f"{self.title}"
 
 
 class ProductCategory(models.Model):
@@ -71,39 +107,57 @@ class ProductCategory(models.Model):
 
 class Product(models.Model):
     title = models.CharField(max_length=50)
-    description = RichTextField()
-    image = CloudinaryField()
-    hero_image = CloudinaryField(blank=True, null=True)
+    description = CKEditor5Field('Text', config_name='extends')
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_product_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
+    hero_image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_product_hero_images'
+    )
+    hero_image_url = models.URLField(null=True, blank=True)
     hero_snippet = models.TextField(blank=True, null=True)
-    category = models.ManyToManyField(ProductCategory)
+    category = models.ManyToManyField(ProductCategory, blank=True)
     slug = models.SlugField(max_length=250, blank=True, null=True)
 
-    def __str__(self):
-        return f"{self.title}"
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
+
+    @property
+    def hero_image(self):
+        if self.hero_image_media:
+            return self.hero_image_media.url
+        return self.hero_image_url or ""
 
     def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
+        return self.image
 
     def get_hero_image_url(self):
-        return f"{cloudinary_url}{self.hero_image}"
+        return self.hero_image
 
     def safe_description_html(self):
         return strip_tags(self.description)
+
+    def __str__(self):
+        return f"{self.title}"
 
 
 class ContactForm(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     full_name = models.CharField(max_length=50)
     email = models.EmailField()
-    # subject = models.CharField(max_length=50)
     phone_number = models.CharField(max_length=15)
-    message = RichTextField()
+    message = CKEditor5Field('Text', config_name='extends')
 
     def __str__(self):
         return f"{self.full_name}"
 
     class Meta:
         verbose_name_plural = "Contact Forms"
+        ordering = ['-date']
 
 
 class EmailSubcription(models.Model):
@@ -115,28 +169,47 @@ class EmailSubcription(models.Model):
 
     class Meta:
         verbose_name_plural = "Email Subcriptions"
+        ordering = ['-date']
 
 
 class OurClient(models.Model):
     name_of_client = models.CharField(max_length=50)
-    logo = CloudinaryField()
+    logo_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_client_logos'
+    )
+    logo_url = models.URLField(null=True, blank=True)
+
+    @property
+    def logo(self):
+        if self.logo_media:
+            return self.logo_media.url
+        return self.logo_url or ""
+
+    def get_logo_url(self):
+        return self.logo
 
     def __str__(self):
         return f"{self.name_of_client}"
 
-    def get_logo_url(self):
-        return f"{cloudinary_url}{self.logo}"
-
 
 class OurSponsor(models.Model):
     name_of_sponsor = models.CharField(max_length=50)
-    logo = CloudinaryField()
+    logo_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_sponsor_logos'
+    )
+    logo_url = models.URLField(null=True, blank=True)
+
+    @property
+    def logo(self):
+        if self.logo_media:
+            return self.logo_media.url
+        return self.logo_url or ""
+
+    def get_logo_url(self):
+        return self.logo
 
     def __str__(self):
         return f"{self.name_of_sponsor}"
-
-    def get_logo_url(self):
-        return f"{cloudinary_url}{self.logo}"
 
 
 class Stat(models.Model):
@@ -150,31 +223,50 @@ class Stat(models.Model):
 class Testimonial(models.Model):
     name = models.CharField(max_length=50)
     position = models.CharField(max_length=50)
-    message = RichTextField()
-    image = CloudinaryField()
+    message = CKEditor5Field('Text', config_name='extends')
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_testimonial_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
+
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
+
+    def get_image_url(self):
+        return self.image
 
     def __str__(self):
         return f"{self.name} - {self.position}"
-
-    def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
 
 
 class OurTeam(models.Model):
     name = models.CharField(max_length=50)
     position = models.CharField(max_length=50)
-    image = CloudinaryField()
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_team_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
+
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
+
+    def get_image_url(self):
+        return self.image
 
     def __str__(self):
         return f"{self.name} - {self.position}"
 
-    def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
-
 
 class SocialUrl(models.Model):
     company = models.OneToOneField(
-        CompanyInfo, related_name='company_social', on_delete=models.CASCADE, blank=True, null=True)
+        CompanyInfo, related_name='company_social', on_delete=models.CASCADE, blank=True, null=True
+    )
     facebook_url = models.URLField(blank=True, null=True)
     instagram_url = models.URLField(blank=True, null=True)
     twitter_url = models.URLField(blank=True, null=True)
@@ -189,26 +281,32 @@ class SocialUrl(models.Model):
 
 class FAQ(models.Model):
     service = models.ForeignKey(
-        Service, on_delete=models.CASCADE, related_name="faqs", blank=True, null=True)
+        Service, on_delete=models.CASCADE, related_name="faqs", blank=True, null=True
+    )
     company = models.ForeignKey(
-        CompanyInfo, related_name='company_faqs', on_delete=models.CASCADE, blank=True, null=True)
+        CompanyInfo, related_name='company_faqs', on_delete=models.CASCADE, blank=True, null=True
+    )
     faq_question = models.CharField(max_length=50)
-    faq_answer = RichTextField()
+    faq_answer = CKEditor5Field('Text', config_name='extends')
 
     def __str__(self):
-        return f"{self.service} {self.company} - {self.faq_question}"
+        return f"{self.service or self.company} - {self.faq_question}"
 
     def clean(self):
         if self.service and self.company:
-            raise ValidationError(
-                "Only one of service and company can be selected.")
+            raise ValidationError("Only one of service and company can be selected.")
 
 
 class CoreValue(models.Model):
+    pic_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_core_value_pics'
+    )
     pic_url = models.URLField(
-        default='https://img.freepik.com/premium-photo/compass-with-arrow-marks-word-mission_207634-2241.jpg?size=626&ext=jpg&ga=GA1.1.1699289041.1668069491&semt=ais')
+        default='https://img.freepik.com/premium-photo/compass-with-arrow-marks-word-mission_207634-2241.jpg?size=626&ext=jpg&ga=GA1.1.1699289041.1668069491&semt=ais',
+        blank=True, null=True
+    )
     title = models.CharField(max_length=50)
-    description = RichTextField()
+    description = CKEditor5Field('Text', config_name='extends')
 
     def __str__(self):
         return f"{self.title}"
@@ -216,11 +314,20 @@ class CoreValue(models.Model):
 
 class HeroSection(models.Model):
     title = models.CharField(max_length=50)
-    description = RichTextField()
-    image = CloudinaryField()
+    description = CKEditor5Field('Text', config_name='extends')
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_hero_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
+
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
 
     def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
+        return self.image
 
     def __str__(self):
         return f"{self.title}"
@@ -228,17 +335,26 @@ class HeroSection(models.Model):
 
 class Event(models.Model):
     date_added = models.DateField(auto_now_add=True)
-    image = CloudinaryField('image')
+    image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_event_images'
+    )
+    image_url = models.URLField(null=True, blank=True)
     title = models.CharField(max_length=32)
-    body = RichTextField()
+    body = CKEditor5Field('Text', config_name='extends')
     event_date = models.DateField()
     slug = models.SlugField(max_length=250, blank=True, null=True)
+
+    @property
+    def image(self):
+        if self.image_media:
+            return self.image_media.url
+        return self.image_url or ""
 
     def safe_body_html(self):
         return strip_tags(self.body)
 
     def get_image_url(self):
-        return f"{cloudinary_url}{self.image}"
+        return self.image
 
     def __str__(self):
         return f"{self.title}"
@@ -246,11 +362,9 @@ class Event(models.Model):
 
 class YouTubeVideo(models.Model):
     title = models.CharField(max_length=255, help_text="Title of the video")
-    description = models.TextField(
-        blank=True, help_text="Optional video description")
+    description = models.TextField(blank=True, help_text="Optional video description")
     video_url = models.URLField(help_text="URL of the YouTube video")
-    embed_code = models.TextField(
-        blank=True, help_text="Optional HTML embed code for the video")
+    embed_code = models.TextField(blank=True, help_text="Optional HTML embed code for the video")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -260,28 +374,28 @@ class YouTubeVideo(models.Model):
         ordering = ['-created_at']
 
     def get_embed_url(self):
-        """
-        If embed_code is not provided, this method attempts to generate
-        the YouTube embed URL from the video_url.
-        Example: https://www.youtube.com/watch?v=VIDEO_ID becomes
-        https://www.youtube.com/embed/VIDEO_ID
-        """
         import re
-        # Regex to extract the video ID from various YouTube URL formats.
-        pattern = re.compile(
-            r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
-        )
+        pattern = re.compile(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*")
         match = pattern.search(self.video_url)
         if match:
             video_id = match.group(1)
             return f'https://www.youtube.com/embed/{video_id}'
-        return self.video_url  # fallback if not matched
+        return self.video_url
 
 
 class PhotoGallery(models.Model):
     title = models.CharField(max_length=50)
-    photo = CloudinaryField()
+    photo_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_photo_gallery'
+    )
+    photo_url = models.URLField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
+
+    @property
+    def photo(self):
+        if self.photo_media:
+            return self.photo_media.url
+        return self.photo_url or ""
 
     def __str__(self):
         return f"{self.title}"
@@ -290,4 +404,4 @@ class PhotoGallery(models.Model):
         ordering = ['-created_at']
 
     def get_photo_url(self):
-        return f"{cloudinary_url}{self.photo}"
+        return self.photo

@@ -1,6 +1,6 @@
 # Admin Frontend Integration Guide - Blog Management (React + react-redux-django-auth)
 
-This guide provides the complete TypeScript frontend service implementation for managing blog posts, categories, tags, and magazine series using `authClientWeb` from **`react-redux-django-auth/web`**.
+This guide provides the complete TypeScript frontend service implementation for managing blog posts, categories, tags, magazine series, and **author profiles** using `authClientWeb` from **`react-redux-django-auth/web`**.
 
 `authClientWeb` manages your authentication state (JWT tokens, headers, refresh flows) automatically.
 
@@ -15,6 +15,11 @@ export const endpoints = {
   publicPostList: "/django_drf_blog_api/post-list",
   publicPostDetail: (slug: string) => `/django_drf_blog_api/post-list/${slug}`,
   
+  // Author Profile Management
+  authorProfile: "/django_drf_blog_api/author",
+  authorsList: "/django_drf_blog_api/authors",
+  authorDetail: (id: number) => `/django_drf_blog_api/authors/${id}`,
+
   // Magazine Series
   magazineSeries: "/django_drf_blog_api/magazines",
   magazineSeriesDetail: (slug: string) => `/django_drf_blog_api/magazines/${slug}`,
@@ -53,12 +58,21 @@ export interface AuthorUser {
   phone_number?: string;
   get_photo_url?: string | null;
   profile_picture?: string | null;
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 export interface Author {
   id: number;
   user: AuthorUser;
   role: string;
+  bio?: string | null;
+}
+
+export interface UpdateAuthorProfilePayload {
+  role?: string;
+  bio?: string;
+  id?: number; // SuperAdmin only: specify target author ID to update
 }
 
 export interface MediaAsset {
@@ -80,15 +94,15 @@ export interface MagazineSeries {
   series_number: string;       // e.g. "Series 41"
   edition_code: string;        // e.g. "VOL. 41 • NO. 01"
   date: string;                // e.g. "January 2026"
-  title: string;               // e.g. "Governor Fubara: A Catalyst to a New Dawn..."
+  title: string;               // e.g. "Governor Fubara: A Catalyst..."
   subtitle?: string | null;
   badge?: string | null;       // e.g. "CURRENT EDITION"
   cover_media?: MediaAsset | null;
   cover_media_id?: number | null;
   cover_image_url?: string | null;
-  cover_image?: string | null; // Computed property returning Cloudinary URL or external URL
+  cover_image?: string | null;
   editorial_summary?: string | null;
-  lead_stories?: string[];     // Array of lead story headlines
+  lead_stories?: string[];
   slug?: string;
   created_at: string;
   updated_at: string;
@@ -124,6 +138,7 @@ export interface CreateBlogPostPayload {
   category: number;
   excerpt?: string;
   read_time?: number;
+  pub_date?: string; // Optional custom past/future publication date
   magazine_series_id?: number | null;
   featured_media_id?: number | null;
   featured_image_url?: string | null;
@@ -133,24 +148,93 @@ export interface CreateBlogPostPayload {
 export interface UpdateBlogPostPayload extends Partial<CreateBlogPostPayload> {
   id: number;
 }
-
-export interface CreateMagazineSeriesPayload {
-  series_number: string;
-  edition_code: string;
-  date: string;
-  title: string;
-  subtitle?: string;
-  badge?: string;
-  cover_media_id?: number | null;
-  cover_image_url?: string;
-  editorial_summary?: string;
-  lead_stories?: string[];
-}
 ```
 
 ---
 
-## 🚀 3. Blog & Magazine Service (`@/services/blogService.ts`)
+## 👤 3. Author Service (`@/services/authorService.ts`)
+
+```typescript
+import { authClientWeb } from "react-redux-django-auth/web";
+import { endpoints } from "@/config/endpoints";
+import { Author, UpdateAuthorProfilePayload } from "@/types/blog";
+
+export const authorService = {
+  // GET: Fetch current user's Author profile
+  async getMyProfile(): Promise<Author> {
+    const client = authClientWeb();
+    const endpoint = endpoints.authorProfile;
+
+    const apiCall = client?.get(endpoint);
+    const response = await apiCall;
+
+    if (response && (response.status === 200 || response.status === 201)) {
+      return response.data;
+    }
+    throw new Error("Failed to fetch author profile");
+  },
+
+  // PUT: Update current user's Author profile (role, bio), or SuperAdmin updating any author by ID
+  async updateProfile(payload: UpdateAuthorProfilePayload): Promise<Author> {
+    const client = authClientWeb();
+    const endpoint = endpoints.authorProfile;
+
+    const apiCall = client?.put(endpoint, payload);
+    const response = await apiCall;
+
+    if (response && (response.status === 200 || response.status === 201)) {
+      return response.data;
+    }
+    throw new Error(`Failed to update author profile (HTTP ${response?.status || "Unknown"})`);
+  },
+
+  // GET: Public list of all authors
+  async getAllAuthors(): Promise<Author[]> {
+    const client = authClientWeb();
+    const endpoint = endpoints.authorsList;
+
+    const apiCall = client?.get(endpoint);
+    const response = await apiCall;
+
+    if (response && (response.status === 200 || response.status === 201)) {
+      return Array.isArray(response.data) ? response.data : response.data.results || [];
+    }
+    return [];
+  },
+
+  // GET: Public detail of single author by ID
+  async getAuthorById(id: number): Promise<Author> {
+    const client = authClientWeb();
+    const endpoint = endpoints.authorDetail(id);
+
+    const apiCall = client?.get(endpoint);
+    const response = await apiCall;
+
+    if (response && (response.status === 200 || response.status === 201)) {
+      return response.data;
+    }
+    throw new Error(`Failed to fetch author #${id}`);
+  },
+
+  // DELETE: Delete author profile (Owner or SuperAdmin)
+  async deleteProfile(id?: number): Promise<void> {
+    const client = authClientWeb();
+    const endpoint = endpoints.authorProfile;
+
+    const apiCall = client?.delete(endpoint, id ? { data: { id } } : undefined);
+    const response = await apiCall;
+
+    if (response && (response.status === 200 || response.status === 204)) {
+      return;
+    }
+    throw new Error("Failed to delete author profile");
+  },
+};
+```
+
+---
+
+## 🚀 4. Blog & Magazine Service (`@/services/blogService.ts`)
 
 ```typescript
 import { authClientWeb } from "react-redux-django-auth/web";
@@ -185,7 +269,7 @@ export const blogService = {
     return [];
   },
 
-  // POST: Create a new blog post (with optional magazine_series_id)
+  // POST: Create a new blog post
   async createPost(data: CreateBlogPostPayload): Promise<BlogPost> {
     const client = authClientWeb();
     const endpoint = endpoints.blogPosts;
@@ -241,38 +325,10 @@ export const blogService = {
     return [];
   },
 
-  // GET: Fetch single Magazine Series by slug
-  async getMagazineSeriesDetail(slug: string): Promise<MagazineSeries> {
-    const client = authClientWeb();
-    const endpoint = endpoints.magazineSeriesDetail(slug);
-
-    const apiCall = client?.get(endpoint);
-    const response = await apiCall;
-
-    if (response && (response.status === 200 || response.status === 201)) {
-      return response.data;
-    }
-    throw new Error(`Failed to fetch magazine series (HTTP ${response?.status || "Unknown"})`);
-  },
-
   // GET: Fetch post categories
   async getCategories(): Promise<Category[]> {
     const client = authClientWeb();
     const endpoint = endpoints.categories;
-
-    const apiCall = client?.get(endpoint);
-    const response = await apiCall;
-
-    if (response && (response.status === 200 || response.status === 201)) {
-      return Array.isArray(response.data) ? response.data : response.data.results || [];
-    }
-    return [];
-  },
-
-  // GET: Fetch post tags
-  async getTags(): Promise<Tag[]> {
-    const client = authClientWeb();
-    const endpoint = endpoints.tags;
 
     const apiCall = client?.get(endpoint);
     const response = await apiCall;
@@ -287,121 +343,93 @@ export const blogService = {
 
 ---
 
-## 🖼 4. CKEditor 5 Upload Adapter via `authClientWeb`
-
-```typescript
-import { authClientWeb } from "react-redux-django-auth/web";
-import { endpoints } from "@/config/endpoints";
-
-export class AuthClientUploadAdapter {
-  private loader: any;
-
-  constructor(loader: any) {
-    this.loader = loader;
-  }
-
-  async upload(): Promise<{ default: string }> {
-    const file = await this.loader.file;
-    const formData = new FormData();
-    formData.append("upload", file);
-
-    const client = authClientWeb();
-    const endpoint = endpoints.ckeditorUpload;
-
-    const apiCall = client?.post(endpoint, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    const response = await apiCall;
-
-    if (response && (response.status === 200 || response.status === 201) && response.data?.url) {
-      return { default: response.data.url };
-    }
-    throw new Error(response?.data?.error?.message || "Failed to upload inline image");
-  }
-
-  abort(): void {}
-}
-
-export function AuthClientUploadAdapterPlugin(editor: any) {
-  editor.plugins.get("FileRepository").createUploadAdapter = (loader: any) => {
-    return new AuthClientUploadAdapter(loader);
-  };
-}
-```
-
----
-
-## 🎨 5. Example Post Form with Magazine Series Selector
+## 🎨 5. Example React Component: Author Profile Settings Form
 
 ```tsx
 import React, { useState, useEffect } from "react";
-import { blogService } from "@/services/blogService";
-import { Category, MagazineSeries } from "@/types/blog";
+import { authorService } from "@/services/authorService";
+import { Author } from "@/types/blog";
 
-export const CreatePostForm: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [magazineSeriesList, setMagazineSeriesList] = useState<MagazineSeries[]>([]);
-  
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [categoryId, setCategoryId] = useState<number | "">("");
-  const [magazineSeriesId, setMagazineSeriesId] = useState<number | "">("");
-  const [excerpt, setExcerpt] = useState("");
-  const [readTime, setReadTime] = useState(5);
-  const [featuredMediaId, setFeaturedMediaId] = useState<number | null>(null);
-  const [featuredImageUrl, setFeaturedImageUrl] = useState("");
-  const [imageCaption, setImageCaption] = useState("");
+export const AuthorProfileSettings: React.FC = () => {
+  const [profile, setProfile] = useState<Author | null>(null);
+  const [role, setRole] = useState("");
+  const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
-    blogService.getCategories().then(setCategories);
-    blogService.getMagazineSeries().then(setMagazineSeriesList);
+    authorService.getMyProfile()
+      .then((data) => {
+        setProfile(data);
+        setRole(data.role || "Author");
+        setBio(data.bio || "");
+      })
+      .catch((err) => setMessage(err.message));
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !content || !categoryId) return;
-
     try {
       setLoading(true);
-      const newPost = await blogService.createPost({
-        title,
-        content,
-        category: Number(categoryId),
-        magazine_series_id: magazineSeriesId ? Number(magazineSeriesId) : null,
-        excerpt,
-        read_time: readTime,
-        featured_media_id: featuredMediaId,
-        featured_image_url: featuredImageUrl || null,
-        featured_image_url_caption: imageCaption,
-      });
-      alert(`Post "${newPost.title}" created successfully!`);
+      const updated = await authorService.updateProfile({ role, bio });
+      setProfile(updated);
+      setMessage("Profile updated successfully!");
     } catch (err: any) {
-      alert(err.message);
+      setMessage(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <form onSubmit={handleSubmit}>
-      {/* Category Dropdown */}
-      <select value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
-        <option value="">Select Category</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
+  if (!profile) return <div>Loading profile...</div>;
 
-      {/* Magazine Series Link Dropdown */}
-      <select value={magazineSeriesId} onChange={(e) => setMagazineSeriesId(Number(e.target.value))}>
-        <option value="">None (Independent Blog Post)</option>
-        {magazineSeriesList.map((m) => (
-          <option key={m.id} value={m.id}>{m.series_number} - {m.title}</option>
-        ))}
-      </select>
-    </form>
+  return (
+    <div className="p-6 max-w-lg mx-auto bg-white rounded-lg shadow">
+      <h2 className="text-xl font-bold mb-4">Author Profile Settings</h2>
+      {message && <div className="mb-4 text-sm text-blue-600">{message}</div>}
+      
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Name</label>
+        <input
+          type="text"
+          disabled
+          value={`${profile.user.first_name} ${profile.user.last_name || ""}`}
+          className="w-full bg-gray-100 border rounded p-2 text-gray-700"
+        />
+      </div>
+
+      <form onSubmit={handleSave}>
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Author Role / Designation</label>
+          <input
+            type="text"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            placeholder="e.g. Senior Editor, Staff Writer"
+            className="w-full border rounded p-2"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Biography (Bio)</label>
+          <textarea
+            rows={4}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Write a brief bio about yourself..."
+            className="w-full border rounded p-2"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "Saving..." : "Save Profile"}
+        </button>
+      </form>
+    </div>
   );
 };
 ```
