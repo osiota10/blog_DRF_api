@@ -1,25 +1,68 @@
+===================
+django-drf-coy-apis
+===================
 
-# django-drf-blog-api
+A reusable Django REST Framework corporate CMS package providing complete CRUD endpoints for Company Information, Services, Products, Team Members, Testimonials, Core Values, Events, Photo Gallery, YouTube Videos, Key Performance Stats, Sponsors, Clients, FAQs, Contact Forms, and Email Subscriptions.
 
+Current Version: **0.2.0**
 
-django-drf-blog-api is a Django blog API app
+Quick Start
+-----------
 
+1. Installation
+~~~~~~~~~~~~~~~
+.. code-block:: bash
 
+    pip install django-drf-coy-apis
 
-## Quick start
+2. Configure ``INSTALLED_APPS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In your Django ``settings.py``:
 
-
-1. Add "Coy" to your INSTALLED_APPS setting like this::
+.. code-block:: python
 
     INSTALLED_APPS = [
         ...,
-        "django-drf-coy-apis",
+        'rest_framework',
+        'media_library',
+        'django_drf_coy_apis',
+        'django_ckeditor_5',
     ]
-```
-2. Include the polls URLconf in your project urls.py like this::
 
-    path("coy/", include("django-drf-coy-apis.urls")),
+3. Add URL Patterns
+~~~~~~~~~~~~~~~~~~~
+In your Django ``urls.py``:
 
-3. Run ``python manage.py migrate`` to create the models.
+.. code-block:: python
 
-4. Start the development server and visit the admin to create a poll.
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('django_drf_coy_apis/', include('django_drf_coy_apis.urls')),
+        path('media-library/', include('media_library.urls')),
+    ]
+
+4. Run Migrations
+~~~~~~~~~~~~~~~~~
+.. code-block:: bash
+
+    python manage.py migrate
+
+Key API Endpoints (All support full CRUD)
+-----------------------------------------
+
+* **Company Info**: ``/django_drf_coy_apis/company-info`` and ``/company-info/<id>``
+* **Services**: ``/django_drf_coy_apis/our-services`` and ``/our-services/<slug>``
+* **Products**: ``/django_drf_coy_apis/products`` and ``/products/<slug>``
+* **Our Clients**: ``/django_drf_coy_apis/clients`` and ``/clients/<pk>``
+* **Our Sponsors**: ``/django_drf_coy_apis/sponsors`` and ``/sponsors/<pk>``
+* **Testimonials**: ``/django_drf_coy_apis/testimonials`` and ``/testimonials/<pk>``
+* **Our Team**: ``/django_drf_coy_apis/our-teams`` and ``/our-teams/<pk>``
+* **Core Values**: ``/django_drf_coy_apis/core-values`` and ``/core-values/<pk>``
+* **Events**: ``/django_drf_coy_apis/events`` and ``/events/<slug>``
+* **Hero Section**: ``/django_drf_coy_apis/hero-section`` and ``/hero-section/<pk>``
+* **Stats**: ``/django_drf_coy_apis/stat`` and ``/stat/<pk>``
+* **YouTube Videos**: ``/django_drf_coy_apis/youtube-videos`` and ``/youtube-videos/<pk>``
+* **Photo Gallery**: ``/django_drf_coy_apis/photo-gallery`` and ``/photo-gallery/<pk>``
+* **Contact Forms**: ``/django_drf_coy_apis/contact-us``
+* **Email Subscriptions**: ``/django_drf_coy_apis/email-subscription``
