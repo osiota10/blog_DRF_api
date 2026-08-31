@@ -25,18 +25,13 @@ class CompanyInfo(models.Model):
         max_length=15, null=True, blank=True, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')]
     )
     email = models.EmailField(null=True, blank=True)
+    email_2 = models.EmailField(null=True, blank=True)
+    email_3 = models.EmailField(null=True, blank=True)
     about_company = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    about_company_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_about_images'
-    )
-    about_company_img_url = models.URLField(null=True, blank=True)
     return_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
     term_and_conditions = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
     privacy_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
     ceo_statment = CKEditor5Field('Text', config_name='extends', null=True, blank=True)
-    ceo_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_ceo_images'
-    )
 
     @property
     def logo(self):
@@ -50,29 +45,11 @@ class CompanyInfo(models.Model):
             return self.site_page_header_image_media.url
         return self.site_page_header_image_url or ""
 
-    @property
-    def about_company_img(self):
-        if self.about_company_media:
-            return self.about_company_media.url
-        return self.about_company_img_url or ""
-
-    @property
-    def ceo_img(self):
-        if self.ceo_media:
-            return self.ceo_media.url
-        return ""
-
     def get_logo(self):
         return self.logo
 
     def get_page_header_image(self):
         return self.site_page_header_image
-
-    def get_about_img(self):
-        return self.about_company_img
-
-    def get_ceo_img(self):
-        return self.ceo_img
 
     def __str__(self):
         return self.company_name or "Company Info"
