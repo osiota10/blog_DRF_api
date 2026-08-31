@@ -191,10 +191,6 @@ class HeroSectionSerializer(serializers.ModelSerializer):
         fields = ('id', 'title', 'description', 'image_media', 'image_media_id', 'image_url', 'image', 'get_image_url')
 
 
-class YouTubeVideoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = YouTubeVideo
-        fields = '__all__'
 
 
 class PhotoGallerySerializer(serializers.ModelSerializer):

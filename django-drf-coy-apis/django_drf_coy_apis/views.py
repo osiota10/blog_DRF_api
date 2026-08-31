@@ -293,17 +293,6 @@ class StatDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
-class YouTubeVideoView(generics.ListCreateAPIView):
-    queryset = YouTubeVideo.objects.all()
-    serializer_class = YouTubeVideoSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-
-class YouTubeVideoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = YouTubeVideo.objects.all()
-    serializer_class = YouTubeVideoSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
 
 class PhotoGalleryView(generics.ListCreateAPIView):
     queryset = PhotoGallery.objects.all()

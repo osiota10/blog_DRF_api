@@ -6,7 +6,7 @@ from .models import (
     CompanyInfo, ServiceCategory, Service, ProductCategory, Product,
     ContactForm, EmailSubcription, OurClient, OurSponsor, Stat,
     Testimonial, OurTeam, SocialUrl, FAQ, CoreValue, HeroSection,
-    Event, YouTubeVideo, PhotoGallery
+    Event, PhotoGallery
 )
 
 User = get_user_model()

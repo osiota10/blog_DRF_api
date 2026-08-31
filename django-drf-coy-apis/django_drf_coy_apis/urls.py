@@ -110,11 +110,6 @@ urlpatterns = [
     path('stat/<int:pk>', StatDetailView.as_view()),
     path('stat/<int:pk>/', StatDetailView.as_view()),
 
-    # YouTube Videos
-    path('youtube-videos', YouTubeVideoView.as_view()),
-    path('youtube-videos/', YouTubeVideoView.as_view()),
-    path('youtube-videos/<int:pk>', YouTubeVideoDetailView.as_view()),
-    path('youtube-videos/<int:pk>/', YouTubeVideoDetailView.as_view()),
 
     # Photo Gallery
     path('photo-gallery', PhotoGalleryView.as_view()),

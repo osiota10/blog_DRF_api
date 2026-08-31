@@ -10,8 +10,11 @@ class CompanyInfo(models.Model):
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_company_logos'
     )
     site_page_header_image_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_page_header_images'
-    )
+        'media_library.MediaAsset',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coy_page_header_images')
     company_name = models.CharField(max_length=100, null=True, blank=True)
     company_address = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(
@@ -26,11 +29,11 @@ class CompanyInfo(models.Model):
     email = models.EmailField(null=True, blank=True)
     email_2 = models.EmailField(null=True, blank=True)
     email_3 = models.EmailField(null=True, blank=True)
-    about_company = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    return_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    term_and_conditions = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    privacy_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    ceo_statment = CKEditor5Field('Text', config_name='extends', null=True, blank=True)
+    about_company = CKEditor5Field('About Company', config_name='extends', blank=True, null=True)
+    return_policy = CKEditor5Field('Return Policy', config_name='extends', blank=True, null=True)
+    term_and_conditions = CKEditor5Field('Term and Conditions', config_name='extends', blank=True, null=True)
+    privacy_policy = CKEditor5Field('Privacy Policy', config_name='extends', blank=True, null=True)
+    ceo_statment = CKEditor5Field('CEO Statement', config_name='extends', null=True, blank=True)
 
     class Meta:
         verbose_name = "Company Information"
@@ -375,28 +378,6 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.title}"
 
-
-class YouTubeVideo(models.Model):
-    title = models.CharField(max_length=255, help_text="Title of the video")
-    description = models.TextField(blank=True, help_text="Optional video description")
-    video_url = models.URLField(help_text="URL of the YouTube video")
-    embed_code = models.TextField(blank=True, help_text="Optional HTML embed code for the video")
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.title
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def get_embed_url(self):
-        import re
-        pattern = re.compile(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*")
-        match = pattern.search(self.video_url)
-        if match:
-            video_id = match.group(1)
-            return f'https://www.youtube.com/embed/{video_id}'
-        return self.video_url
 
 
 class PhotoGallery(models.Model):
