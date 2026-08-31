@@ -94,10 +94,25 @@ class ServiceView(generics.ListCreateAPIView):
 
 
 class ServiceDetail(generics.RetrieveUpdateDestroyAPIView):
-    lookup_field = 'slug'
-    serializer_class = ServiceSerializer
     queryset = Service.objects.all()
+    serializer_class = ServiceSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('slug') or self.kwargs.get('pk') or self.kwargs.get('id')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=val).first()
+                if obj:
+                    self.check_object_permissions(self.request, obj)
+                    return obj
+            obj = queryset.filter(slug=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        from django.http import Http404
+        raise Http404("Service not found")
 
 
 class ProductView(generics.ListCreateAPIView):
@@ -107,10 +122,25 @@ class ProductView(generics.ListCreateAPIView):
 
 
 class ProductDetail(generics.RetrieveUpdateDestroyAPIView):
-    lookup_field = 'slug'
-    serializer_class = ProductSerializer
     queryset = Product.objects.all()
+    serializer_class = ProductSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('slug') or self.kwargs.get('pk') or self.kwargs.get('id')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=val).first()
+                if obj:
+                    self.check_object_permissions(self.request, obj)
+                    return obj
+            obj = queryset.filter(slug=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        from django.http import Http404
+        raise Http404("Product not found")
 
 
 class TestimonialView(generics.ListCreateAPIView):
@@ -144,10 +174,25 @@ class CompanyInfoView(generics.ListCreateAPIView):
 
 
 class CompanyInfoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    lookup_field = 'id'
     queryset = CompanyInfo.objects.all()
     serializer_class = CompanyInfoSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('id') or self.kwargs.get('pk')
+        if val is not None:
+            obj = queryset.filter(pk=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        # Fallback to single/first record if no ID passed
+        obj = queryset.first()
+        if obj:
+            self.check_object_permissions(self.request, obj)
+            return obj
+        from django.http import Http404
+        raise Http404("CompanyInfo not found")
 
 
 class SocialUrlView(generics.ListCreateAPIView):
@@ -193,10 +238,25 @@ class EventView(generics.ListCreateAPIView):
 
 
 class EventDetail(generics.RetrieveUpdateDestroyAPIView):
-    lookup_field = 'slug'
-    serializer_class = EventSerializer
     queryset = Event.objects.all()
+    serializer_class = EventSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('slug') or self.kwargs.get('pk') or self.kwargs.get('id')
+        if val is not None:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=val).first()
+                if obj:
+                    self.check_object_permissions(self.request, obj)
+                    return obj
+            obj = queryset.filter(slug=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        from django.http import Http404
+        raise Http404("Event not found")
 
 
 class HeroSectionView(generics.ListCreateAPIView):

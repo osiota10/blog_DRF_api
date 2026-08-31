@@ -308,6 +308,12 @@ class CoreValue(models.Model):
     title = models.CharField(max_length=50)
     description = CKEditor5Field('Text', config_name='extends')
 
+    @property
+    def pic(self):
+        if self.pic_media:
+            return self.pic_media.url
+        return self.pic_url or ""
+
     def __str__(self):
         return f"{self.title}"
 

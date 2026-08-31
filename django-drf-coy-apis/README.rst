@@ -4,7 +4,7 @@ django-drf-coy-apis
 
 A reusable Django REST Framework corporate CMS package providing complete CRUD endpoints for Company Information, Services, Products, Team Members, Testimonials, Core Values, Events, Photo Gallery, YouTube Videos, Key Performance Stats, Sponsors, Clients, FAQs, Contact Forms, and Email Subscriptions.
 
-Current Version: **0.2.0**
+Current Version: **0.2.5**
 
 Quick Start
 -----------
