@@ -167,32 +167,42 @@ class OurTeamDetail(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
-class CompanyInfoView(generics.ListCreateAPIView):
-    queryset = CompanyInfo.objects.all()
-    serializer_class = CompanyInfoSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-
-class CompanyInfoDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CompanyInfo.objects.all()
+class CompanyInfoView(generics.RetrieveUpdateAPIView, generics.ListCreateAPIView):
     serializer_class = CompanyInfoSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_object(self):
-        queryset = self.filter_queryset(self.get_queryset())
-        val = self.kwargs.get('id') or self.kwargs.get('pk')
-        if val is not None:
-            obj = queryset.filter(pk=val).first()
-            if obj:
-                self.check_object_permissions(self.request, obj)
-                return obj
-        # Fallback to single/first record if no ID passed
-        obj = queryset.first()
-        if obj:
-            self.check_object_permissions(self.request, obj)
-            return obj
-        from django.http import Http404
-        raise Http404("CompanyInfo not found")
+        obj = CompanyInfo.load()
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def get_queryset(self):
+        return CompanyInfo.objects.filter(pk=1)
+
+    def get(self, request, *args, **kwargs):
+        instance = CompanyInfo.load()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        instance = CompanyInfo.load()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CompanyInfoDetailView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = CompanyInfoSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        obj = CompanyInfo.load()
+        self.check_object_permissions(self.request, obj)
+        return obj
+
+    def delete(self, request, *args, **kwargs):
+        return Response({'detail': 'CompanyInfo deletion is prevented.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SocialUrlView(generics.ListCreateAPIView):

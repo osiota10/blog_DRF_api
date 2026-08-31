@@ -10,11 +10,8 @@ class CompanyInfo(models.Model):
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_company_logos'
     )
     site_page_header_image_media = models.ForeignKey(
-        'media_library.MediaAsset',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='coy_page_header_images')
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_page_header_images'
+    )
     company_name = models.CharField(max_length=100, null=True, blank=True)
     company_address = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(
@@ -29,23 +26,38 @@ class CompanyInfo(models.Model):
     email = models.EmailField(null=True, blank=True)
     email_2 = models.EmailField(null=True, blank=True)
     email_3 = models.EmailField(null=True, blank=True)
-    about_company = CKEditor5Field('About Company', config_name='extends', blank=True, null=True)
-    return_policy = CKEditor5Field('Return Policy', config_name='extends', blank=True, null=True)
-    term_and_conditions = CKEditor5Field('Term and Conditions', config_name='extends', blank=True, null=True)
-    privacy_policy = CKEditor5Field('Privacy Policy', config_name='extends', blank=True, null=True)
-    ceo_statment = CKEditor5Field('CEO Statement', config_name='extends', null=True, blank=True)
+    about_company = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    return_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    term_and_conditions = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    privacy_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
+    ceo_statment = CKEditor5Field('Text', config_name='extends', null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Company Information"
+        verbose_name_plural = "Company Information"
+
+    def save(self, *args, **kwargs):
+        # Always force primary key to 1 so updates overwrite rather than create new rows
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        # Prevent deletion of the single company info instance
+        pass
+
+    @classmethod
+    def load(cls):
+        """Helper to fetch the single instance anywhere in views/serializers"""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
 
     @property
     def logo(self):
-        if self.logo_media:
-            return self.logo_media.url
-        return ""
+        return self.logo_media.url if self.logo_media else ""
 
     @property
     def site_page_header_image(self):
-        if self.site_page_header_image_media:
-            return self.site_page_header_image_media.url
-        return ""
+        return self.site_page_header_image_media.url if self.site_page_header_image_media else ""
 
     def get_logo(self):
         return self.logo

@@ -45,9 +45,9 @@ class CorporateAPICRUDTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['company_name'], 'Updated Tech Studio')
 
-        # Delete
+        # Delete (prevented)
         res = self.client.delete(f'/django_drf_coy_apis/company-info/{coy_id}')
-        self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_service_crud(self):
         # Create
