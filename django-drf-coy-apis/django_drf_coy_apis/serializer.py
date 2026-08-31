@@ -150,7 +150,7 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
             'id', 'company_name', 'company_address', 'telephone', 'telephone_2', 'telephone_3',
             'email', 'email_2', 'email_3', 'about_company', 'return_policy', 'term_and_conditions',
             'privacy_policy', 'company_social', 'company_faqs',
-            'site_page_header_image_media', 'site_page_header_image_media_id', 'site_page_header_image_url', 'site_page_header_image', 'get_page_header_image',
+            'site_page_header_image_media', 'site_page_header_image_media_id', 'site_page_header_image', 'get_page_header_image',
             'logo_media', 'logo_media_id', 'logo', 'get_logo', 'ceo_statment'
         )
 

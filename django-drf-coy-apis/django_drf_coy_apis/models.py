@@ -10,9 +10,11 @@ class CompanyInfo(models.Model):
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_company_logos'
     )
     site_page_header_image_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_page_header_images'
-    )
-    site_page_header_image_url = models.URLField(null=True, blank=True)
+        'media_library.MediaAsset',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coy_page_header_images')
     company_name = models.CharField(max_length=100, null=True, blank=True)
     company_address = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(
@@ -27,11 +29,11 @@ class CompanyInfo(models.Model):
     email = models.EmailField(null=True, blank=True)
     email_2 = models.EmailField(null=True, blank=True)
     email_3 = models.EmailField(null=True, blank=True)
-    about_company = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    return_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    term_and_conditions = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    privacy_policy = CKEditor5Field('Text', config_name='extends', blank=True, null=True)
-    ceo_statment = CKEditor5Field('Text', config_name='extends', null=True, blank=True)
+    about_company = CKEditor5Field('About Company', config_name='extends', blank=True, null=True)
+    return_policy = CKEditor5Field('Return Policy', config_name='extends', blank=True, null=True)
+    term_and_conditions = CKEditor5Field('Term and Conditions', config_name='extends', blank=True, null=True)
+    privacy_policy = CKEditor5Field('Privacy Policy', config_name='extends', blank=True, null=True)
+    ceo_statment = CKEditor5Field('CEO Statement', config_name='extends', null=True, blank=True)
 
     @property
     def logo(self):
@@ -43,7 +45,7 @@ class CompanyInfo(models.Model):
     def site_page_header_image(self):
         if self.site_page_header_image_media:
             return self.site_page_header_image_media.url
-        return self.site_page_header_image_url or ""
+        return ""
 
     def get_logo(self):
         return self.logo
@@ -103,8 +105,11 @@ class Product(models.Model):
     )
     image_url = models.URLField(null=True, blank=True)
     hero_image_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_product_hero_images'
-    )
+        'media_library.MediaAsset',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coy_product_hero_images')
     hero_image_url = models.URLField(null=True, blank=True)
     hero_snippet = models.TextField(blank=True, null=True)
     category = models.ManyToManyField(ProductCategory, blank=True)
@@ -215,8 +220,11 @@ class Testimonial(models.Model):
     position = models.CharField(max_length=50)
     message = CKEditor5Field('Text', config_name='extends')
     image_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_testimonial_images'
-    )
+        'media_library.MediaAsset',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='coy_testimonial_images')
     image_url = models.URLField(null=True, blank=True)
 
     @property
@@ -293,8 +301,8 @@ class CoreValue(models.Model):
     )
     pic_url = models.URLField(
         default='https://img.freepik.com/premium-photo/compass-with-arrow-marks-word-mission_207634-2241.jpg?size=626&ext=jpg&ga=GA1.1.1699289041.1668069491&semt=ais',
-        blank=True, null=True
-    )
+        blank=True,
+        null=True)
     title = models.CharField(max_length=50)
     description = CKEditor5Field('Text', config_name='extends')
 
