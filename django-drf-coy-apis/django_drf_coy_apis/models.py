@@ -9,14 +9,19 @@ class CompanyInfo(models.Model):
     logo_media = models.ForeignKey(
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_company_logos'
     )
-    logo_url = models.URLField(null=True, blank=True)
-    get_page_header_image = models.URLField(default="", blank=True)
+    site_page_header_image_media = models.ForeignKey(
+        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_page_header_images'
+    )
+    site_page_header_image_url = models.URLField(null=True, blank=True)
     company_name = models.CharField(max_length=100, null=True, blank=True)
     company_address = models.CharField(max_length=255, null=True, blank=True)
     telephone = models.CharField(
         max_length=15, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')], null=True, blank=True
     )
     telephone_2 = models.CharField(
+        max_length=15, null=True, blank=True, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')]
+    )
+    telephone_3 = models.CharField(
         max_length=15, null=True, blank=True, validators=[RegexValidator(r'^\d{11}$', 'Enter a valid phone number.')]
     )
     email = models.EmailField(null=True, blank=True)
@@ -32,13 +37,18 @@ class CompanyInfo(models.Model):
     ceo_media = models.ForeignKey(
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_ceo_images'
     )
-    ceo_img_url = models.URLField(null=True, blank=True)
 
     @property
     def logo(self):
         if self.logo_media:
             return self.logo_media.url
-        return self.logo_url or ""
+        return ""
+
+    @property
+    def site_page_header_image(self):
+        if self.site_page_header_image_media:
+            return self.site_page_header_image_media.url
+        return self.site_page_header_image_url or ""
 
     @property
     def about_company_img(self):
@@ -50,10 +60,13 @@ class CompanyInfo(models.Model):
     def ceo_img(self):
         if self.ceo_media:
             return self.ceo_media.url
-        return self.ceo_img_url or ""
+        return ""
 
     def get_logo(self):
         return self.logo
+
+    def get_page_header_image(self):
+        return self.site_page_header_image
 
     def get_about_img(self):
         return self.about_company_img

@@ -139,6 +139,10 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
     logo_media_id = serializers.PrimaryKeyRelatedField(
         queryset=MediaAsset.objects.all(), write_only=True, required=False, allow_null=True, source='logo_media'
     )
+    site_page_header_image_media = MediaAssetSerializer(read_only=True)
+    site_page_header_image_media_id = serializers.PrimaryKeyRelatedField(
+        queryset=MediaAsset.objects.all(), write_only=True, required=False, allow_null=True, source='site_page_header_image_media'
+    )
     about_company_media = MediaAssetSerializer(read_only=True)
     about_company_media_id = serializers.PrimaryKeyRelatedField(
         queryset=MediaAsset.objects.all(), write_only=True, required=False, allow_null=True, source='about_company_media'
@@ -151,12 +155,13 @@ class CompanyInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = CompanyInfo
         fields = (
-            'id', 'company_name', 'company_address', 'telephone', 'telephone_2',
+            'id', 'company_name', 'company_address', 'telephone', 'telephone_2', 'telephone_3',
             'email', 'about_company', 'return_policy', 'term_and_conditions',
-            'privacy_policy', 'company_social', 'company_faqs', 'get_page_header_image',
-            'logo_media', 'logo_media_id', 'logo_url', 'logo', 'get_logo',
+            'privacy_policy', 'company_social', 'company_faqs',
+            'site_page_header_image_media', 'site_page_header_image_media_id', 'site_page_header_image_url', 'site_page_header_image', 'get_page_header_image',
+            'logo_media', 'logo_media_id', 'logo', 'get_logo',
             'about_company_media', 'about_company_media_id', 'about_company_img_url', 'about_company_img', 'get_about_img',
-            'ceo_statment', 'ceo_media', 'ceo_media_id', 'ceo_img_url', 'ceo_img', 'get_ceo_img'
+            'ceo_statment', 'ceo_media', 'ceo_media_id', 'ceo_img', 'get_ceo_img'
         )
 
 
