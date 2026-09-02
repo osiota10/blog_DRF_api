@@ -379,7 +379,6 @@ class Event(models.Model):
         return f"{self.title}"
 
 
-
 class PhotoGallery(models.Model):
     title = models.CharField(max_length=50)
     photo_media = models.ForeignKey(
