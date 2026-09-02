@@ -1,51 +1,46 @@
-# Django REST Framework Architectural Guidelines & Standardized Unified CRUD Pattern
+# Django REST Framework Architectural Guidelines & Standardized APIView Pattern
 
-This project enforces a standardized, unified CRUD architectural pattern using a single `APIView` per domain resource rather than fragmented generic class views (`ListCreateAPIView`, `RetrieveUpdateDestroyAPIView`).
+This project enforces an explicit, clean, and maintainable CRUD pattern using a single, self-contained `APIView` per resource without abstract metaclass introspection, dynamic schema scrapers, or magic helper wrappers.
 
 ---
 
-## 🏛 Architectural Pattern Specifications
+## 🏛 Rules for Each View Class
 
-### 1. Class-Based Encapsulation
-* Every domain model `<ModelName>` is encapsulated inside a single class named `<ModelName>View(APIView)` extending `BaseUnifiedAPIView` (or `APIView`).
-* Permission classes are declared per view (defaulting to `permission_classes = [IsAuthenticatedOrReadOnly]`, or `[AllowAny]` for public submit actions).
+### 1. Direct Inheritance & Permissions
+* Every view class `<ModelName>View` inherits directly from `rest_framework.views.APIView`.
+* Permission classes are set per class (defaulting to `permission_classes = [IsAuthenticatedOrReadOnly]`, or `AllowAny` for public submissions like `ContactFormView` / `EmailSubcriptionView`).
 
-### 2. Unified Method Signatures & Object Resolution
-Every view method supports resolving the target record via URL kwargs (`pk`, `slug`, `id`) or payload data (`id = request.data.get('id')`):
-```python
-def get_object(self, pk=None, slug=None, request_data=None):
-    # Resolves target object by pk, slug, or request_data/query_params ('id' or 'pk')
-```
+### 2. Explicit Lookup Resolution (`get_object`)
+* Each class implements an explicit `get_object(self, pk=None, slug=None, request_data=None)` method.
+* Resolves instances using `pk`, `slug`, or fallback payload fields (`request.data.get('id')` / `request.data.get('pk')`).
+* Returns `None` if not found (view methods return `HTTP_404_NOT_FOUND`).
 
-### 3. HTTP Verb Responsibilities
+### 3. HTTP Verb Implementation
 
 #### `get(self, request, pk=None, slug=None, *args, **kwargs)`
-* **Detail Retrieval:** If `pk`, `slug`, or query parameter `id`/`slug` is provided, return that single serialized instance (`HTTP_200_OK`), or `404` if not found.
-* **List Retrieval:** If no identifier is given, return all items in the queryset (`many=True`).
+* **Detail:** If `pk`, `slug`, or an ID/slug query parameter is present, return that single serialized instance (`HTTP_200_OK`).
+* **List:** Otherwise, return all records ordered by `-id` (`many=True`).
 
 #### `post(self, request, *args, **kwargs)`
-* Extracts and validates payload fields.
-* **Foreign Keys & Media Resolution:** Pre-processes payload data using `prepare_payload_data()`. Accepts raw integer IDs, stringified integers, or nested objects `{ "id": ... }` for both `<field>_id` and `<field>`.
-* **ManyToMany / Categories:** Accepts list of IDs or instances for `<rel>_ids` and `<rel>`.
-* **Auto-Slug Generation:** Automatically generates slugs via `slugify()` if the target model features a `slug` field and none was provided.
-* Saves and returns the serialized record with `HTTP_201_CREATED`.
+* Extracts fields explicitly from `request.data`.
+* **Foreign Media Asset Resolution:** Resolves both `<field>_id` and `<field>`. Extracts integer IDs from raw integers, stringified integers, or nested objects `{ "id": ... }`.
+* **ManyToMany Relationships:** Resolves list of IDs or instances for `<rel>_ids` and `<rel>`.
+* **Auto-Slug:** Auto-generates `slug` via `slugify()` if model has a slug field and none was provided.
+* Saves and returns serialized result with `HTTP_201_CREATED`.
 
 #### `put(self, request, pk=None, slug=None, *args, **kwargs)` & `patch(...)`
-* Resolves the target record using `get_object()`.
-* Updates fields provided in `request.data`.
-* **Clearing Relational Fields:** Explicitly handles clearing relationships when fields are passed as `None` or `null`.
-* Saves instance and returns serialized record with `HTTP_200_OK`.
+* Retrieves instance via `self.get_object(...)`.
+* Updates fields present in `request.data`.
+* Supports clearing media (`None`) or re-assigning new media asset IDs.
+* Saves instance and returns updated data with `HTTP_200_OK`.
 
 #### `delete(self, request, pk=None, slug=None, *args, **kwargs)`
-* Resolves target record.
-* Checks object-level permissions (`self.check_object_permissions(request, obj)`).
-* Deletes the record and returns `HTTP_204_NO_CONTENT` (or prevents deletion for singleton entities like `CompanyInfo`).
+* Retrieves instance via `self.get_object(...)`.
+* Calls `.delete()` and returns `HTTP_204_NO_CONTENT` (or returns `HTTP_400_BAD_REQUEST` for singleton instances like `CompanyInfo`).
 
 ---
 
 ## 🛣 Standard URL Routing Pattern
-
-Single view class handles all list, detail, and slug routes:
 
 ```python
 urlpatterns = [
