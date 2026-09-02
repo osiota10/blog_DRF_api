@@ -1,32 +1,31 @@
 import random
 import string
-
 from django.utils.text import slugify
 
 
-def random_string_generator(size=10, chars=string.ascii_lowercase + string.digits):
+def random_string_generator(size=4, chars=string.ascii_lowercase + string.digits):
     return ''.join(random.choice(chars) for _ in range(size))
 
 
 def unique_slug_generator(instance, new_slug=None):
     """
-    This is for a Django project and it assumes your instance
-    has a model with a slug field and a title character (char) field.
+    Generates a unique slug for a model instance featuring a slug field.
     """
     if new_slug is not None:
         slug = new_slug
     else:
-        try:
-            slug = slugify(instance.title)
-        except AttributeError:
-            slug = slugify(instance.job_title)
+        title = getattr(instance, 'title', None) or getattr(instance, 'name', None) or getattr(instance, 'job_title', None) or ""
+        slug = slugify(title)
+
+    if not slug:
+        slug = random_string_generator(size=8)
 
     Klass = instance.__class__
-    qs_exists = Klass.objects.filter(slug=slug).exists()
-    if qs_exists:
-        new_slug = "{slug}-{randstr}".format(
-            slug=slug,
-            randstr=random_string_generator(size=4)
-        )
+    qs = Klass.objects.filter(slug=slug)
+    if instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+
+    if qs.exists():
+        new_slug = f"{slug}-{random_string_generator(size=4)}"
         return unique_slug_generator(instance, new_slug=new_slug)
     return slug

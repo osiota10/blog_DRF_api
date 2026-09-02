@@ -120,3 +120,11 @@ class CorporateAPICRUDTests(TestCase):
         # Delete
         res = self.client.delete(f'/django_drf_coy_apis/our-teams/{team_id}/')
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_auto_slug_signal(self):
+        s1 = Service.objects.create(title='Cloud Migration', description='Migrate to cloud')
+        self.assertEqual(s1.slug, 'cloud-migration')
+
+        s2 = Service.objects.create(title='Cloud Migration', description='Another cloud service')
+        self.assertTrue(s2.slug.startswith('cloud-migration-'))
+

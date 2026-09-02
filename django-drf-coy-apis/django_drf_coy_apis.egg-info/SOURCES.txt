@@ -9,6 +9,7 @@ django_drf_coy_apis/admin.py
 django_drf_coy_apis/apps.py
 django_drf_coy_apis/models.py
 django_drf_coy_apis/serializer.py
+django_drf_coy_apis/signals.py
 django_drf_coy_apis/tests.py
 django_drf_coy_apis/urls.py
 django_drf_coy_apis/utils.py
