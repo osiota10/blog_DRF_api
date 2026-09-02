@@ -149,7 +149,7 @@ class OurTeamSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'user', 'user_id', 'user_details', 'name', 'phone_number',
             'display_name', 'display_phone_number', 'position', 'bio',
-            'image_media', 'image_media_id', 'image_url', 'image', 'get_image_url',
+            'image_media', 'image_media_id', 'image', 'get_image_url',
             'facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url', 'github_url'
         )
 

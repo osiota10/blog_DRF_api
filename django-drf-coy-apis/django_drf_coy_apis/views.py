@@ -755,7 +755,6 @@ class OurTeamView(APIView):
         phone_number = request.data.get('phone_number')
         position = request.data.get('position')
         bio = request.data.get('bio')
-        image_url = request.data.get('image_url')
         facebook_url = request.data.get('facebook_url')
         instagram_url = request.data.get('instagram_url')
         twitter_url = request.data.get('twitter_url')
@@ -778,7 +777,6 @@ class OurTeamView(APIView):
             position=position,
             bio=bio,
             image_media=image_media,
-            image_url=image_url,
             facebook_url=facebook_url,
             instagram_url=instagram_url,
             twitter_url=twitter_url,
@@ -812,8 +810,6 @@ class OurTeamView(APIView):
             obj.position = request.data.get('position')
         if 'bio' in request.data:
             obj.bio = request.data.get('bio')
-        if 'image_url' in request.data:
-            obj.image_url = request.data.get('image_url')
         if 'facebook_url' in request.data:
             obj.facebook_url = request.data.get('facebook_url')
         if 'instagram_url' in request.data:

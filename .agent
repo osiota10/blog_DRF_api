@@ -58,7 +58,7 @@
   * `phone_number`: (String, optional) Phone number.
   * `position`: (String, required) Job title / position in company.
   * `bio`: (HTML/Text, optional) Extended bio / statement.
-  * `image_media_id` / `image_url`: (MediaAsset ID or URL string, optional) Member photo.
+  * `image_media_id`: (MediaAsset ID, optional) Member photo.
   * `facebook_url`: (URL string, optional) Facebook profile link.
   * `instagram_url`: (URL string, optional) Instagram profile link.
   * `twitter_url`: (URL string, optional) Twitter/X profile link.

@@ -267,7 +267,6 @@ class OurTeam(models.Model):
     image_media = models.ForeignKey(
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_team_images'
     )
-    image_url = models.URLField(null=True, blank=True)
     facebook_url = models.URLField(null=True, blank=True)
     instagram_url = models.URLField(null=True, blank=True)
     twitter_url = models.URLField(null=True, blank=True)
@@ -276,9 +275,15 @@ class OurTeam(models.Model):
 
     @property
     def image(self):
-        if self.image_media:
+        # 1. Dedicated team media asset
+        if self.image_media and getattr(self.image_media, 'url', None):
             return self.image_media.url
-        return self.image_url or ""
+
+        # 2. Linked User's profile photo from media_library or Google
+        if self.user and hasattr(self.user, 'get_photo_url'):
+            return self.user.get_photo_url
+
+        return ""
 
     def get_image_url(self):
         return self.image
