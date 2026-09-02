@@ -190,15 +190,3 @@ class HeroSectionSerializer(serializers.ModelSerializer):
         model = HeroSection
         fields = ('id', 'title', 'description', 'image_media', 'image_media_id', 'image_url', 'image', 'get_image_url')
 
-
-
-
-class PhotoGallerySerializer(serializers.ModelSerializer):
-    photo_media = MediaAssetSerializer(read_only=True)
-    photo_media_id = serializers.PrimaryKeyRelatedField(
-        queryset=MediaAsset.objects.all(), write_only=True, required=False, allow_null=True, source='photo_media'
-    )
-
-    class Meta:
-        model = PhotoGallery
-        fields = ('id', 'title', 'photo_media', 'photo_media_id', 'photo_url', 'photo', 'get_photo_url', 'created_at')

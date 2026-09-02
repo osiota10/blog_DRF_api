@@ -6,7 +6,7 @@ from .models import (
     CompanyInfo, ServiceCategory, Service, ProductCategory, Product,
     ContactForm, EmailSubcription, OurClient, OurSponsor, Stat,
     Testimonial, OurTeam, SocialUrl, FAQ, CoreValue, HeroSection,
-    Event, PhotoGallery
+    Event
 )
 
 User = get_user_model()
@@ -22,7 +22,7 @@ class CorporateAPICRUDTests(TestCase):
 
     def test_company_info_crud(self):
         # Create
-        res = self.client.post('/django_drf_coy_apis/company-info', {
+        res = self.client.post('/django_drf_coy_apis/company-info/', {
             'company_name': 'Test Tech Studio',
             'company_address': '123 Tech Street',
             'email': 'contact@testtech.com'
@@ -31,27 +31,27 @@ class CorporateAPICRUDTests(TestCase):
         coy_id = res.data['id']
 
         # Read List
-        res = self.client.get('/django_drf_coy_apis/company-info')
+        res = self.client.get('/django_drf_coy_apis/company-info/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Read Detail
-        res = self.client.get(f'/django_drf_coy_apis/company-info/{coy_id}')
+        res = self.client.get(f'/django_drf_coy_apis/company-info/{coy_id}/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Update
-        res = self.client.patch(f'/django_drf_coy_apis/company-info/{coy_id}', {
+        res = self.client.patch(f'/django_drf_coy_apis/company-info/{coy_id}/', {
             'company_name': 'Updated Tech Studio'
         })
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['company_name'], 'Updated Tech Studio')
 
         # Delete (prevented)
-        res = self.client.delete(f'/django_drf_coy_apis/company-info/{coy_id}')
+        res = self.client.delete(f'/django_drf_coy_apis/company-info/{coy_id}/')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_service_crud(self):
         # Create
-        res = self.client.post('/django_drf_coy_apis/our-services', {
+        res = self.client.post('/django_drf_coy_apis/our-services/', {
             'title': 'Web Development',
             'description': '<p>Custom website development</p>',
             'slug': 'web-development'
@@ -60,30 +60,30 @@ class CorporateAPICRUDTests(TestCase):
         service_id = res.data['id']
 
         # Read List
-        res = self.client.get('/django_drf_coy_apis/our-services')
+        res = self.client.get('/django_drf_coy_apis/our-services/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Read Detail by Slug
-        res = self.client.get('/django_drf_coy_apis/our-services/web-development')
+        res = self.client.get('/django_drf_coy_apis/our-services/web-development/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Read Detail by ID
-        res = self.client.get(f'/django_drf_coy_apis/our-services/{service_id}')
+        res = self.client.get(f'/django_drf_coy_apis/our-services/{service_id}/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Update
-        res = self.client.patch(f'/django_drf_coy_apis/our-services/{service_id}', {
+        res = self.client.patch(f'/django_drf_coy_apis/our-services/{service_id}/', {
             'title': 'Advanced Web Development'
         })
         self.assertEqual(res.status_code, status.HTTP_200_OK)
 
         # Delete
-        res = self.client.delete(f'/django_drf_coy_apis/our-services/{service_id}')
+        res = self.client.delete(f'/django_drf_coy_apis/our-services/{service_id}/')
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_product_crud(self):
         # Create
-        res = self.client.post('/django_drf_coy_apis/products', {
+        res = self.client.post('/django_drf_coy_apis/products/', {
             'title': 'SaaS Platform',
             'description': '<p>Enterprise SaaS Product</p>',
             'slug': 'saas-platform'
@@ -92,18 +92,18 @@ class CorporateAPICRUDTests(TestCase):
         prod_id = res.data['id']
 
         # Read Detail by Slug & ID
-        res_slug = self.client.get('/django_drf_coy_apis/products/saas-platform')
+        res_slug = self.client.get('/django_drf_coy_apis/products/saas-platform/')
         self.assertEqual(res_slug.status_code, status.HTTP_200_OK)
-        res_id = self.client.get(f'/django_drf_coy_apis/products/{prod_id}')
+        res_id = self.client.get(f'/django_drf_coy_apis/products/{prod_id}/')
         self.assertEqual(res_id.status_code, status.HTTP_200_OK)
 
         # Delete
-        res = self.client.delete(f'/django_drf_coy_apis/products/{prod_id}')
+        res = self.client.delete(f'/django_drf_coy_apis/products/{prod_id}/')
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_our_team_crud(self):
         # Create
-        res = self.client.post('/django_drf_coy_apis/our-teams', {
+        res = self.client.post('/django_drf_coy_apis/our-teams/', {
             'name': 'John Doe',
             'position': 'Lead Architect'
         })
@@ -111,12 +111,12 @@ class CorporateAPICRUDTests(TestCase):
         team_id = res.data['id']
 
         # Update
-        res = self.client.patch(f'/django_drf_coy_apis/our-teams/{team_id}', {
+        res = self.client.patch(f'/django_drf_coy_apis/our-teams/{team_id}/', {
             'position': 'CTO'
         })
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['position'], 'CTO')
 
         # Delete
-        res = self.client.delete(f'/django_drf_coy_apis/our-teams/{team_id}')
+        res = self.client.delete(f'/django_drf_coy_apis/our-teams/{team_id}/')
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)

@@ -377,27 +377,3 @@ class Event(models.Model):
 
     def __str__(self):
         return f"{self.title}"
-
-
-class PhotoGallery(models.Model):
-    title = models.CharField(max_length=50)
-    photo_media = models.ForeignKey(
-        'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_photo_gallery'
-    )
-    photo_url = models.URLField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, blank=True, null=True)
-
-    @property
-    def photo(self):
-        if self.photo_media:
-            return self.photo_media.url
-        return self.photo_url or ""
-
-    def __str__(self):
-        return f"{self.title}"
-
-    class Meta:
-        ordering = ['-created_at']
-
-    def get_photo_url(self):
-        return self.photo

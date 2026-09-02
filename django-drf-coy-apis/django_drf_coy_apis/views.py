@@ -8,7 +8,7 @@ from .models import (
     CompanyInfo, ServiceCategory, Service, ProductCategory, Product,
     ContactForm, EmailSubcription, OurClient, OurSponsor, Stat,
     Testimonial, OurTeam, SocialUrl, FAQ, CoreValue, HeroSection,
-    Event, PhotoGallery
+    Event
 )
 from media_library.models import MediaAsset
 from .serializer import (
@@ -17,7 +17,7 @@ from .serializer import (
     EmailSubcriptionSerializer, OurClientSerializer, OurSponsorSerializer,
     StatSerializer, TestimonialSerializer, OurTeamSerializer,
     SocialUrlSerializer, FaqSerializer, CoreValueSerializer,
-    HeroSectionSerializer, EventSerializer, PhotoGallerySerializer
+    HeroSectionSerializer, EventSerializer
 )
 
 
@@ -1304,79 +1304,7 @@ class StatView(APIView):
         if not obj:
             return Response({'error': 'Stat not found.'}, status=status.HTTP_404_NOT_FOUND)
         obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# ============================================================================
-# 18. PhotoGalleryView
-# ============================================================================
-class PhotoGalleryView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
-
-    def get_object(self, pk=None, slug=None, request=None):
-        target_id = pk or (request.data.get('id') if request and hasattr(request, 'data') else None)
-        if target_id:
-            try:
-                return PhotoGallery.objects.get(pk=target_id)
-            except (PhotoGallery.DoesNotExist, ValueError):
-                return None
-        return None
-
-    def get(self, request, pk=None, slug=None, *args, **kwargs):
-        if pk or request.query_params.get('id'):
-            obj = self.get_object(pk=pk, request=request)
-            if not obj:
-                return Response({'error': 'PhotoGallery not found.'}, status=status.HTTP_404_NOT_FOUND)
-            return Response(PhotoGallerySerializer(obj).data, status=status.HTTP_200_OK)
-
-        records = PhotoGallery.objects.all().order_by('-id')
-        return Response(PhotoGallerySerializer(records, many=True).data, status=status.HTTP_200_OK)
-
-    def post(self, request, *args, **kwargs):
-        title = request.data.get('title')
-        photo_url = request.data.get('photo_url')
-        media_input = request.data.get('photo_media_id') or request.data.get('photo_media')
-        photo_media = get_media_asset(media_input)
-
-        if not title:
-            return Response({'error': 'Title is required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        obj = PhotoGallery.objects.create(
-            title=title,
-            photo_media=photo_media,
-            photo_url=photo_url
-        )
-        return Response(PhotoGallerySerializer(obj).data, status=status.HTTP_201_CREATED)
-
-    def put(self, request, pk=None, slug=None, *args, **kwargs):
-        obj = self.get_object(pk=pk, request=request)
-        if not obj:
-            return Response({'error': 'PhotoGallery not found.'}, status=status.HTTP_404_NOT_FOUND)
-
-        if 'title' in request.data:
-            obj.title = request.data.get('title')
-        if 'photo_url' in request.data:
-            obj.photo_url = request.data.get('photo_url')
-
-        if 'photo_media' in request.data or 'photo_media_id' in request.data:
-            media_input = request.data.get('photo_media_id') or request.data.get('photo_media')
-            obj.photo_media = get_media_asset(media_input)
-
-        obj.save()
-        return Response(PhotoGallerySerializer(obj).data, status=status.HTTP_200_OK)
-
-    def patch(self, request, pk=None, slug=None, *args, **kwargs):
-        return self.put(request, pk=pk, slug=slug, *args, **kwargs)
-
-    def delete(self, request, pk=None, slug=None, *args, **kwargs):
-        obj = self.get_object(pk=pk, request=request)
-        if not obj:
-            return Response({'error': 'PhotoGallery not found.'}, status=status.HTTP_404_NOT_FOUND)
-        obj.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-# Backward Compatibility Aliases
+        return Response(status=status.HTTP_204_NO_CONTENT)# Backward Compatibility Aliases
 ContactFormDetailView = ContactFormView
 EmailSubcriptionDetailView = EmailSubcriptionView
 OurClientDetailView = OurClientView
@@ -1396,4 +1324,3 @@ CoreValueDetailView = CoreValueView
 EventDetail = EventView
 HeroSectionDetailView = HeroSectionView
 StatDetailView = StatView
-PhotoGalleryDetailView = PhotoGalleryView

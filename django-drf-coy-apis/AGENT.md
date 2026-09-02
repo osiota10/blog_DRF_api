@@ -11,7 +11,7 @@ This project enforces an explicit, clean, and maintainable CRUD pattern using a 
 * Permission classes are set per class (defaulting to `permission_classes = [IsAuthenticatedOrReadOnly]`, or `AllowAny` for public submissions like `ContactFormView` / `EmailSubcriptionView`).
 
 ### 2. Explicit Lookup Resolution (`get_object`)
-* Each class implements an explicit `get_object(self, pk=None, slug=None, request_data=None)` method.
+* Each class implements an explicit `get_object(self, pk=None, slug=None, request=None)` method.
 * Resolves instances using `pk`, `slug`, or fallback payload fields (`request.data.get('id')` / `request.data.get('pk')`).
 * Returns `None` if not found (view methods return `HTTP_404_NOT_FOUND`).
 
@@ -44,11 +44,8 @@ This project enforces an explicit, clean, and maintainable CRUD pattern using a 
 
 ```python
 urlpatterns = [
-    path('<plural>', <ModelName>View.as_view(), name='<singular>-list-create'),
-    path('<plural>/', <ModelName>View.as_view(), name='<singular>-list-create-slash'),
-    path('<plural>/<int:pk>', <ModelName>View.as_view(), name='<singular>-detail'),
-    path('<plural>/<int:pk>/', <ModelName>View.as_view(), name='<singular>-detail-slash'),
-    path('<plural>/<slug:slug>', <ModelName>View.as_view(), name='<singular>-detail-slug'),
-    path('<plural>/<slug:slug>/', <ModelName>View.as_view(), name='<singular>-detail-slug-slash'),
+    path('<plural>/', <ModelName>View.as_view(), name='<singular>-list-create'),
+    path('<plural>/<int:pk>/', <ModelName>View.as_view(), name='<singular>-detail-pk'),
+    path('<plural>/<slug:slug>/', <ModelName>View.as_view(), name='<singular>-detail-slug'),
 ]
 ```
