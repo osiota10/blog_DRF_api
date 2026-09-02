@@ -1,0 +1,193 @@
+# .agent — Frontend Integration & Consumption Guide for `django-drf-coy-apis`
+
+`django-drf-coy-apis` provides complete RESTful CRUD API endpoints for managing corporate CMS data (Company Information, Services, Products, Team Members, Testimonials, Core Values, Events, Key Performance Stats, Sponsors, Clients, FAQs, Contact Forms, and Email Subscriptions).
+
+---
+
+## 🔑 Authentication & Headers
+
+* **Public Endpoints (`GET` requests & Form Submissions):**
+  * `GET` requests for all resources are publicly accessible (`IsAuthenticatedOrReadOnly`).
+  * `POST /contact-us/` and `POST /email-subscription/` are public (`AllowAny`).
+* **Protected Endpoints (`POST`, `PUT`, `PATCH`, `DELETE`):**
+  * Require authentication headers:
+    ```http
+    Authorization: Bearer <your_jwt_access_token>
+    Content-Type: application/json
+    ```
+
+---
+
+## 🛣 API Endpoint Sitemap
+
+| Domain Resource | Endpoint Route | Supported Verbs | Lookup Parameters |
+| :--- | :--- | :--- | :--- |
+| **Company Info** | `/company-info/` | `GET`, `POST`, `PUT`, `PATCH` | Singleton (ID `1`) |
+| **Our Services** | `/our-services/` | `GET`, `POST` | List / Create |
+| | `/our-services/<int:pk>/` | `GET`, `PUT`, `PATCH`, `DELETE` | Integer `pk` |
+| | `/our-services/<slug:slug>/` | `GET`, `PUT`, `PATCH`, `DELETE` | String `slug` |
+| **Products** | `/products/` | `GET`, `POST` | List / Create |
+| | `/products/<int:pk>/` | `GET`, `PUT`, `PATCH`, `DELETE` | Integer `pk` |
+| | `/products/<slug:slug>/` | `GET`, `PUT`, `PATCH`, `DELETE` | String `slug` |
+| **Events** | `/events/` | `GET`, `POST` | List / Create |
+| | `/events/<int:pk>/` | `GET`, `PUT`, `PATCH`, `DELETE` | Integer `pk` |
+| | `/events/<slug:slug>/` | `GET`, `PUT`, `PATCH`, `DELETE` | String `slug` |
+| **Service Categories**| `/service-categories/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Product Categories**| `/product-categories/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Team Members** | `/our-teams/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Testimonials** | `/testimonials/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Core Values** | `/core-values/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Hero Section** | `/hero-section/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Stats** | `/stat/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Our Clients** | `/clients/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Our Sponsors** | `/sponsors/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **FAQs** | `/faqs/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Social URLs** | `/social-urls/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Contact Forms** | `/contact-us/` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+| **Subscriptions** | `/email-subscription/`| `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | `pk` |
+
+---
+
+## 🖼 Relational & Media Asset Handling
+
+When creating or updating entities with media library foreign keys (`logo_media_id`, `image_media_id`, `hero_image_media_id`, `pic_media_id`):
+
+1. **Assigning Media Asset:**
+   Frontends can pass an integer ID, string ID, or nested object:
+   ```json
+   {
+     "title": "Cloud Migration",
+     "description": "Enterprise cloud services",
+     "image_media_id": 14
+   }
+   ```
+   Or nested object:
+   ```json
+   {
+     "title": "Cloud Migration",
+     "description": "Enterprise cloud services",
+     "image_media": { "id": 14 }
+   }
+   ```
+2. **Clearing Media Asset:**
+   To remove an existing media association, pass `null`:
+   ```json
+   {
+     "image_media_id": null
+   }
+   ```
+
+---
+
+## 🏷 Many-to-Many Category Resolution
+
+For entities supporting categories (`Service`, `Product`):
+* Pass an array of category IDs under `category_ids` or `category`:
+  ```json
+  {
+    "title": "Web App Development",
+    "description": "Custom DRF & React apps",
+    "category_ids": [1, 3]
+  }
+  ```
+
+---
+
+## 🔀 Automatic Unique Slug Generation
+
+* Models with slugs (`Service`, `Product`, `Event`) accept an optional custom `slug` string in payload data.
+* If `slug` is omitted or left empty, the backend `pre_save` signal automatically generates a URL-safe, unique slug based on `title` or `name` (appending a suffix if a collision occurs).
+
+---
+
+## 💻 Frontend Code Examples (TypeScript / Axios)
+
+### 1. Fetch List of Services
+```typescript
+import axios from 'axios';
+
+export interface Service {
+  id: number;
+  title: string;
+  description: string;
+  image_url: string;
+  slug: string;
+  image_media?: {
+    id: number;
+    url: string;
+  };
+}
+
+export const fetchServices = async (): Promise<Service[]> => {
+  const response = await axios.get<Service[]>('https://your-api.com/api/our-services/');
+  return response.data;
+};
+```
+
+### 2. Fetch Single Service by Slug
+```typescript
+export const fetchServiceBySlug = async (slug: string): Promise<Service> => {
+  const response = await axios.get<Service>(`https://your-api.com/api/our-services/${slug}/`);
+  return response.data;
+};
+```
+
+### 3. Create New Service (Admin)
+```typescript
+export const createService = async (data: {
+  title: string;
+  description: string;
+  image_media_id?: number;
+  category_ids?: number[];
+}, token: string): Promise<Service> => {
+  const response = await axios.post<Service>(
+    'https://your-api.com/api/our-services/',
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+```
+
+### 4. Update Company Info (Singleton)
+```typescript
+export const updateCompanyInfo = async (data: {
+  company_name?: string;
+  email?: string;
+  telephone?: string;
+  logo_media_id?: number | null;
+}, token: string) => {
+  const response = await axios.patch(
+    'https://your-api.com/api/company-info/',
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+  return response.data;
+};
+```
+
+### 5. Public Contact Form Submission
+```typescript
+export const submitContactForm = async (formData: {
+  full_name: string;
+  email: string;
+  phone_number?: string;
+  message: string;
+}) => {
+  const response = await axios.post(
+    'https://your-api.com/api/contact-us/',
+    formData
+  );
+  return response.data;
+};
+```
