@@ -1,118 +1,123 @@
 from django.urls import path
-from .views import *
+from .views import (
+    ContactFormView, EmailSubcriptionView, OurClientView, OurSponsorView,
+    ServiceCategoryView, ProductCategoryView, ServiceView, ProductView,
+    TestimonialView, OurTeamView, CompanyInfoView, SocialUrlView, FaqView,
+    CoreValueView, EventView, HeroSectionView, StatView, PhotoGalleryView
+)
 
 urlpatterns = [
-    # Contact Forms
-    path('contact-us', ContactFormView.as_view(), name='contact-us-list-create'),
-    path('contact-us/', ContactFormView.as_view(), name='contact-us-list-create-slash'),
-    path('contact-us/<int:pk>', ContactFormView.as_view(), name='contact-us-detail'),
-    path('contact-us/<int:pk>/', ContactFormView.as_view(), name='contact-us-detail-slash'),
+    # Contact Us
+    path('contact-us', ContactFormView.as_view(), name='contact-us-list-create-noslash'),
+    path('contact-us/', ContactFormView.as_view(), name='contact-us-list-create'),
+    path('contact-us/<int:pk>', ContactFormView.as_view(), name='contact-us-detail-pk-noslash'),
+    path('contact-us/<int:pk>/', ContactFormView.as_view(), name='contact-us-detail-pk'),
 
     # Email Subscription
-    path('email-subscription', EmailSubcriptionView.as_view(), name='email-subscription-list-create'),
-    path('email-subscription/', EmailSubcriptionView.as_view(), name='email-subscription-list-create-slash'),
-    path('email-subscription/<int:pk>', EmailSubcriptionView.as_view(), name='email-subscription-detail'),
-    path('email-subscription/<int:pk>/', EmailSubcriptionView.as_view(), name='email-subscription-detail-slash'),
+    path('email-subscription', EmailSubcriptionView.as_view(), name='email-subscription-list-create-noslash'),
+    path('email-subscription/', EmailSubcriptionView.as_view(), name='email-subscription-list-create'),
+    path('email-subscription/<int:pk>', EmailSubcriptionView.as_view(), name='email-subscription-detail-pk-noslash'),
+    path('email-subscription/<int:pk>/', EmailSubcriptionView.as_view(), name='email-subscription-detail-pk'),
 
-    # Company Clients
-    path('clients', OurClientView.as_view(), name='clients-list-create'),
-    path('clients/', OurClientView.as_view(), name='clients-list-create-slash'),
-    path('clients/<int:pk>', OurClientView.as_view(), name='clients-detail'),
-    path('clients/<int:pk>/', OurClientView.as_view(), name='clients-detail-slash'),
+    # Our Clients
+    path('clients', OurClientView.as_view(), name='clients-list-create-noslash'),
+    path('clients/', OurClientView.as_view(), name='clients-list-create'),
+    path('clients/<int:pk>', OurClientView.as_view(), name='clients-detail-pk-noslash'),
+    path('clients/<int:pk>/', OurClientView.as_view(), name='clients-detail-pk'),
 
-    # Company Sponsors
-    path('sponsors', OurSponsorView.as_view(), name='sponsors-list-create'),
-    path('sponsors/', OurSponsorView.as_view(), name='sponsors-list-create-slash'),
-    path('sponsors/<int:pk>', OurSponsorView.as_view(), name='sponsors-detail'),
-    path('sponsors/<int:pk>/', OurSponsorView.as_view(), name='sponsors-detail-slash'),
+    # Our Sponsors
+    path('sponsors', OurSponsorView.as_view(), name='sponsors-list-create-noslash'),
+    path('sponsors/', OurSponsorView.as_view(), name='sponsors-list-create'),
+    path('sponsors/<int:pk>', OurSponsorView.as_view(), name='sponsors-detail-pk-noslash'),
+    path('sponsors/<int:pk>/', OurSponsorView.as_view(), name='sponsors-detail-pk'),
 
     # Service Categories
-    path('service-categories', ServiceCategoryView.as_view(), name='service-categories-list-create'),
-    path('service-categories/', ServiceCategoryView.as_view(), name='service-categories-list-create-slash'),
-    path('service-categories/<int:pk>', ServiceCategoryView.as_view(), name='service-categories-detail'),
-    path('service-categories/<int:pk>/', ServiceCategoryView.as_view(), name='service-categories-detail-slash'),
+    path('service-categories', ServiceCategoryView.as_view(), name='service-categories-list-create-noslash'),
+    path('service-categories/', ServiceCategoryView.as_view(), name='service-categories-list-create'),
+    path('service-categories/<int:pk>', ServiceCategoryView.as_view(), name='service-categories-detail-pk-noslash'),
+    path('service-categories/<int:pk>/', ServiceCategoryView.as_view(), name='service-categories-detail-pk'),
 
     # Product Categories
-    path('product-categories', ProductCategoryView.as_view(), name='product-categories-list-create'),
-    path('product-categories/', ProductCategoryView.as_view(), name='product-categories-list-create-slash'),
-    path('product-categories/<int:pk>', ProductCategoryView.as_view(), name='product-categories-detail'),
-    path('product-categories/<int:pk>/', ProductCategoryView.as_view(), name='product-categories-detail-slash'),
+    path('product-categories', ProductCategoryView.as_view(), name='product-categories-list-create-noslash'),
+    path('product-categories/', ProductCategoryView.as_view(), name='product-categories-list-create'),
+    path('product-categories/<int:pk>', ProductCategoryView.as_view(), name='product-categories-detail-pk-noslash'),
+    path('product-categories/<int:pk>/', ProductCategoryView.as_view(), name='product-categories-detail-pk'),
 
-    # Services (supports both ID and Slug)
-    path('our-services', ServiceView.as_view(), name='services-list-create'),
-    path('our-services/', ServiceView.as_view(), name='services-list-create-slash'),
-    path('our-services/<int:pk>', ServiceView.as_view(), name='services-detail'),
-    path('our-services/<int:pk>/', ServiceView.as_view(), name='services-detail-slash'),
-    path('our-services/<slug:slug>', ServiceView.as_view(), name='services-detail-slug'),
-    path('our-services/<slug:slug>/', ServiceView.as_view(), name='services-detail-slug-slash'),
+    # Services
+    path('our-services', ServiceView.as_view(), name='service-list-create-noslash'),
+    path('our-services/', ServiceView.as_view(), name='service-list-create'),
+    path('our-services/<int:pk>', ServiceView.as_view(), name='service-detail-pk-noslash'),
+    path('our-services/<int:pk>/', ServiceView.as_view(), name='service-detail-pk'),
+    path('our-services/<slug:slug>', ServiceView.as_view(), name='service-detail-slug-noslash'),
+    path('our-services/<slug:slug>/', ServiceView.as_view(), name='service-detail-slug'),
 
-    # Products (supports both ID and Slug)
-    path('products', ProductView.as_view(), name='products-list-create'),
-    path('products/', ProductView.as_view(), name='products-list-create-slash'),
-    path('products/<int:pk>', ProductView.as_view(), name='products-detail'),
-    path('products/<int:pk>/', ProductView.as_view(), name='products-detail-slash'),
-    path('products/<slug:slug>', ProductView.as_view(), name='products-detail-slug'),
-    path('products/<slug:slug>/', ProductView.as_view(), name='products-detail-slug-slash'),
+    # Products
+    path('products', ProductView.as_view(), name='product-list-create-noslash'),
+    path('products/', ProductView.as_view(), name='product-list-create'),
+    path('products/<int:pk>', ProductView.as_view(), name='product-detail-pk-noslash'),
+    path('products/<int:pk>/', ProductView.as_view(), name='product-detail-pk'),
+    path('products/<slug:slug>', ProductView.as_view(), name='product-detail-slug-noslash'),
+    path('products/<slug:slug>/', ProductView.as_view(), name='product-detail-slug'),
 
     # Testimonials
-    path('testimonials', TestimonialView.as_view(), name='testimonials-list-create'),
-    path('testimonials/', TestimonialView.as_view(), name='testimonials-list-create-slash'),
-    path('testimonials/<int:pk>', TestimonialView.as_view(), name='testimonials-detail'),
-    path('testimonials/<int:pk>/', TestimonialView.as_view(), name='testimonials-detail-slash'),
+    path('testimonials', TestimonialView.as_view(), name='testimonials-list-create-noslash'),
+    path('testimonials/', TestimonialView.as_view(), name='testimonials-list-create'),
+    path('testimonials/<int:pk>', TestimonialView.as_view(), name='testimonials-detail-pk-noslash'),
+    path('testimonials/<int:pk>/', TestimonialView.as_view(), name='testimonials-detail-pk'),
 
     # Our Team
-    path('our-teams', OurTeamView.as_view(), name='our-teams-list-create'),
-    path('our-teams/', OurTeamView.as_view(), name='our-teams-list-create-slash'),
-    path('our-teams/<int:pk>', OurTeamView.as_view(), name='our-teams-detail'),
-    path('our-teams/<int:pk>/', OurTeamView.as_view(), name='our-teams-detail-slash'),
+    path('our-teams', OurTeamView.as_view(), name='our-teams-list-create-noslash'),
+    path('our-teams/', OurTeamView.as_view(), name='our-teams-list-create'),
+    path('our-teams/<int:pk>', OurTeamView.as_view(), name='our-teams-detail-pk-noslash'),
+    path('our-teams/<int:pk>/', OurTeamView.as_view(), name='our-teams-detail-pk'),
 
-    # Company Info
-    path('company-info', CompanyInfoView.as_view(), name='company-info-singleton'),
-    path('company-info/', CompanyInfoView.as_view(), name='company-info-singleton-slash'),
-    path('company-info/<int:id>', CompanyInfoView.as_view(), name='company-info-detail'),
-    path('company-info/<int:id>/', CompanyInfoView.as_view(), name='company-info-detail-slash'),
+    # Company Info (Singleton)
+    path('company-info', CompanyInfoView.as_view(), name='company-info-singleton-noslash'),
+    path('company-info/', CompanyInfoView.as_view(), name='company-info-singleton'),
+    path('company-info/<int:id>', CompanyInfoView.as_view(), name='company-info-detail-id-noslash'),
+    path('company-info/<int:id>/', CompanyInfoView.as_view(), name='company-info-detail-id'),
 
     # Social URLs
-    path('social-urls', SocialUrlView.as_view(), name='social-urls-list-create'),
-    path('social-urls/', SocialUrlView.as_view(), name='social-urls-list-create-slash'),
-    path('social-urls/<int:pk>', SocialUrlView.as_view(), name='social-urls-detail'),
-    path('social-urls/<int:pk>/', SocialUrlView.as_view(), name='social-urls-detail-slash'),
+    path('social-urls', SocialUrlView.as_view(), name='social-urls-list-create-noslash'),
+    path('social-urls/', SocialUrlView.as_view(), name='social-urls-list-create'),
+    path('social-urls/<int:pk>', SocialUrlView.as_view(), name='social-urls-detail-pk-noslash'),
+    path('social-urls/<int:pk>/', SocialUrlView.as_view(), name='social-urls-detail-pk'),
 
     # FAQs
-    path('faqs', FaqView.as_view(), name='faqs-list-create'),
-    path('faqs/', FaqView.as_view(), name='faqs-list-create-slash'),
-    path('faqs/<int:pk>', FaqView.as_view(), name='faqs-detail'),
-    path('faqs/<int:pk>/', FaqView.as_view(), name='faqs-detail-slash'),
+    path('faqs', FaqView.as_view(), name='faqs-list-create-noslash'),
+    path('faqs/', FaqView.as_view(), name='faqs-list-create'),
+    path('faqs/<int:pk>', FaqView.as_view(), name='faqs-detail-pk-noslash'),
+    path('faqs/<int:pk>/', FaqView.as_view(), name='faqs-detail-pk'),
 
     # Core Values
-    path('core-values', CoreValueView.as_view(), name='core-values-list-create'),
-    path('core-values/', CoreValueView.as_view(), name='core-values-list-create-slash'),
-    path('core-values/<int:pk>', CoreValueView.as_view(), name='core-values-detail'),
-    path('core-values/<int:pk>/', CoreValueView.as_view(), name='core-values-detail-slash'),
+    path('core-values', CoreValueView.as_view(), name='core-values-list-create-noslash'),
+    path('core-values/', CoreValueView.as_view(), name='core-values-list-create'),
+    path('core-values/<int:pk>', CoreValueView.as_view(), name='core-values-detail-pk-noslash'),
+    path('core-values/<int:pk>/', CoreValueView.as_view(), name='core-values-detail-pk'),
 
-    # Events (supports both ID and Slug)
-    path('events', EventView.as_view(), name='events-list-create'),
-    path('events/', EventView.as_view(), name='events-list-create-slash'),
-    path('events/<int:pk>', EventView.as_view(), name='events-detail'),
-    path('events/<int:pk>/', EventView.as_view(), name='events-detail-slash'),
-    path('events/<slug:slug>', EventView.as_view(), name='events-detail-slug'),
-    path('events/<slug:slug>/', EventView.as_view(), name='events-detail-slug-slash'),
+    # Events
+    path('events', EventView.as_view(), name='event-list-create-noslash'),
+    path('events/', EventView.as_view(), name='event-list-create'),
+    path('events/<int:pk>', EventView.as_view(), name='event-detail-pk-noslash'),
+    path('events/<int:pk>/', EventView.as_view(), name='event-detail-pk'),
+    path('events/<slug:slug>', EventView.as_view(), name='event-detail-slug-noslash'),
+    path('events/<slug:slug>/', EventView.as_view(), name='event-detail-slug'),
 
     # Hero Section
-    path('hero-section', HeroSectionView.as_view(), name='hero-section-list-create'),
-    path('hero-section/', HeroSectionView.as_view(), name='hero-section-list-create-slash'),
-    path('hero-section/<int:pk>', HeroSectionView.as_view(), name='hero-section-detail'),
-    path('hero-section/<int:pk>/', HeroSectionView.as_view(), name='hero-section-detail-slash'),
+    path('hero-section', HeroSectionView.as_view(), name='hero-section-list-create-noslash'),
+    path('hero-section/', HeroSectionView.as_view(), name='hero-section-list-create'),
+    path('hero-section/<int:pk>', HeroSectionView.as_view(), name='hero-section-detail-pk-noslash'),
+    path('hero-section/<int:pk>/', HeroSectionView.as_view(), name='hero-section-detail-pk'),
 
     # Stats
-    path('stat', StatView.as_view(), name='stat-list-create'),
-    path('stat/', StatView.as_view(), name='stat-list-create-slash'),
-    path('stat/<int:pk>', StatView.as_view(), name='stat-detail'),
-    path('stat/<int:pk>/', StatView.as_view(), name='stat-detail-slash'),
+    path('stat', StatView.as_view(), name='stat-list-create-noslash'),
+    path('stat/', StatView.as_view(), name='stat-list-create'),
+    path('stat/<int:pk>', StatView.as_view(), name='stat-detail-pk-noslash'),
+    path('stat/<int:pk>/', StatView.as_view(), name='stat-detail-pk'),
 
     # Photo Gallery
-    path('photo-gallery', PhotoGalleryView.as_view(), name='photo-gallery-list-create'),
-    path('photo-gallery/', PhotoGalleryView.as_view(), name='photo-gallery-list-create-slash'),
-    path('photo-gallery/<int:pk>', PhotoGalleryView.as_view(), name='photo-gallery-detail'),
-    path('photo-gallery/<int:pk>/', PhotoGalleryView.as_view(), name='photo-gallery-detail-slash'),
+    path('photo-gallery', PhotoGalleryView.as_view(), name='photo-gallery-list-create-noslash'),
+    path('photo-gallery/', PhotoGalleryView.as_view(), name='photo-gallery-list-create'),
+    path('photo-gallery/<int:pk>', PhotoGalleryView.as_view(), name='photo-gallery-detail-pk-noslash'),
+    path('photo-gallery/<int:pk>/', PhotoGalleryView.as_view(), name='photo-gallery-detail-pk'),
 ]
