@@ -48,6 +48,30 @@
 
 ---
 
+## 👥 Team Members (`OurTeam`) Payload & User Link Integration
+
+`OurTeam` endpoints (`/our-teams/`) support optional linking to a registered `UserAccount` or fallback to direct `name` & `phone_number` fields.
+
+* **Payload Fields:**
+  * `user_id`: (Integer, optional) Primary key of the `UserAccount`.
+  * `name`: (String, optional if `user_id` is provided) Member's full name.
+  * `phone_number`: (String, optional) Phone number.
+  * `position`: (String, required) Job title / position in company.
+  * `bio`: (HTML/Text, optional) Extended bio / statement.
+  * `image_media_id` / `image_url`: (MediaAsset ID or URL string, optional) Member photo.
+  * `facebook_url`: (URL string, optional) Facebook profile link.
+  * `instagram_url`: (URL string, optional) Instagram profile link.
+  * `twitter_url`: (URL string, optional) Twitter/X profile link.
+  * `linkedin_url`: (URL string, optional) LinkedIn profile link.
+  * `github_url`: (URL string, optional) GitHub profile link.
+
+* **Response Helper Properties:**
+  * `display_name`: Automatically returns `user.first_name + user.last_name` / `user.email` if linked to `user`, otherwise returns `name`.
+  * `display_phone_number`: Automatically returns `user.phone_number` if present, otherwise returns `phone_number`.
+  * `user_details`: Object containing `{ id, email, first_name, last_name }` if linked to a user.
+
+---
+
 ## 🖼 Relational & Media Asset Handling
 
 When creating or updating entities with media library foreign keys (`logo_media_id`, `image_media_id`, `hero_image_media_id`, `pic_media_id`):
@@ -132,16 +156,23 @@ export const fetchServiceBySlug = async (slug: string): Promise<Service> => {
 };
 ```
 
-### 3. Create New Service (Admin)
+### 3. Create New Team Member Linked to UserAccount
 ```typescript
-export const createService = async (data: {
-  title: string;
-  description: string;
+export const createTeamMember = async (data: {
+  user_id?: number;
+  name?: string;
+  phone_number?: string;
+  position: string;
+  bio?: string;
   image_media_id?: number;
-  category_ids?: number[];
-}, token: string): Promise<Service> => {
-  const response = await axios.post<Service>(
-    'https://your-api.com/api/our-services/',
+  facebook_url?: string;
+  instagram_url?: string;
+  twitter_url?: string;
+  linkedin_url?: string;
+  github_url?: string;
+}, token: string) => {
+  const response = await axios.post(
+    'https://your-api.com/api/our-teams/',
     data,
     {
       headers: {

@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from django_ckeditor_5.fields import CKEditor5Field
 from django.utils.html import strip_tags
 from django.core.exceptions import ValidationError
@@ -256,12 +257,22 @@ class Testimonial(models.Model):
 
 
 class OurTeam(models.Model):
-    name = models.CharField(max_length=50)
-    position = models.CharField(max_length=50)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_team_profiles'
+    )
+    name = models.CharField(max_length=150, null=True, blank=True)
+    phone_number = models.CharField(max_length=50, null=True, blank=True)
+    position = models.CharField(max_length=100)
+    bio = CKEditor5Field('Bio', config_name='extends', null=True, blank=True)
     image_media = models.ForeignKey(
         'media_library.MediaAsset', on_delete=models.SET_NULL, null=True, blank=True, related_name='coy_team_images'
     )
     image_url = models.URLField(null=True, blank=True)
+    facebook_url = models.URLField(null=True, blank=True)
+    instagram_url = models.URLField(null=True, blank=True)
+    twitter_url = models.URLField(null=True, blank=True)
+    linkedin_url = models.URLField(null=True, blank=True)
+    github_url = models.URLField(null=True, blank=True)
 
     @property
     def image(self):
@@ -272,8 +283,23 @@ class OurTeam(models.Model):
     def get_image_url(self):
         return self.image
 
+    @property
+    def display_name(self):
+        if self.user:
+            full_name = f"{getattr(self.user, 'first_name', '')} {getattr(self.user, 'last_name', '')}".strip()
+            if full_name:
+                return full_name
+            return getattr(self.user, 'email', str(self.user))
+        return self.name or ""
+
+    @property
+    def display_phone_number(self):
+        if self.user and hasattr(self.user, 'phone_number') and getattr(self.user, 'phone_number'):
+            return getattr(self.user, 'phone_number')
+        return self.phone_number or ""
+
     def __str__(self):
-        return f"{self.name} - {self.position}"
+        return f"{self.display_name} - {self.position}"
 
 
 class SocialUrl(models.Model):

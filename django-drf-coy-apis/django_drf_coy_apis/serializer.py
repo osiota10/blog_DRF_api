@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from .models import *
 from media_library.models import MediaAsset
 from media_library.serializers import MediaAssetSerializer
@@ -126,10 +127,31 @@ class OurTeamSerializer(serializers.ModelSerializer):
     image_media_id = serializers.PrimaryKeyRelatedField(
         queryset=MediaAsset.objects.all(), write_only=True, required=False, allow_null=True, source='image_media'
     )
+    user_id = serializers.PrimaryKeyRelatedField(
+        queryset=get_user_model().objects.all(), write_only=True, required=False, allow_null=True, source='user'
+    )
+    user_details = serializers.SerializerMethodField(read_only=True)
+    display_name = serializers.CharField(read_only=True)
+    display_phone_number = serializers.CharField(read_only=True)
+
+    def get_user_details(self, obj):
+        if obj.user:
+            return {
+                'id': obj.user.id,
+                'email': getattr(obj.user, 'email', ''),
+                'first_name': getattr(obj.user, 'first_name', ''),
+                'last_name': getattr(obj.user, 'last_name', ''),
+            }
+        return None
 
     class Meta:
         model = OurTeam
-        fields = ('id', 'name', 'position', 'image_media', 'image_media_id', 'image_url', 'image', 'get_image_url')
+        fields = (
+            'id', 'user', 'user_id', 'user_details', 'name', 'phone_number',
+            'display_name', 'display_phone_number', 'position', 'bio',
+            'image_media', 'image_media_id', 'image_url', 'image', 'get_image_url',
+            'facebook_url', 'instagram_url', 'twitter_url', 'linkedin_url', 'github_url'
+        )
 
 
 class CompanyInfoSerializer(serializers.ModelSerializer):

@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from django.utils.text import slugify
+from django.contrib.auth import get_user_model
 
 from .models import (
     CompanyInfo, ServiceCategory, Service, ProductCategory, Product,
@@ -733,41 +734,96 @@ class OurTeamView(APIView):
         if pk or request.query_params.get('id'):
             obj = self.get_object(pk=pk, request=request)
             if not obj:
-                return Response({'error': 'OurTeam not found.'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'OurTeam member not found.'}, status=status.HTTP_404_NOT_FOUND)
             return Response(OurTeamSerializer(obj).data, status=status.HTTP_200_OK)
 
         records = OurTeam.objects.all().order_by('-id')
         return Response(OurTeamSerializer(records, many=True).data, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
+        user_input = request.data.get('user_id') or request.data.get('user')
+        user = None
+        if user_input:
+            User = get_user_model()
+            user_id = user_input.get('id') if isinstance(user_input, dict) else user_input
+            try:
+                user = User.objects.get(pk=user_id)
+            except (User.DoesNotExist, ValueError):
+                user = None
+
         name = request.data.get('name')
+        phone_number = request.data.get('phone_number')
         position = request.data.get('position')
+        bio = request.data.get('bio')
         image_url = request.data.get('image_url')
+        facebook_url = request.data.get('facebook_url')
+        instagram_url = request.data.get('instagram_url')
+        twitter_url = request.data.get('twitter_url')
+        linkedin_url = request.data.get('linkedin_url')
+        github_url = request.data.get('github_url')
+
         media_input = request.data.get('image_media_id') or request.data.get('image_media')
         image_media = get_media_asset(media_input)
 
-        if not name or not position:
-            return Response({'error': 'Name and position are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not position:
+            return Response({'error': 'Position is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user and not name:
+            return Response({'error': 'Either User or Name is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         obj = OurTeam.objects.create(
+            user=user,
             name=name,
+            phone_number=phone_number,
             position=position,
+            bio=bio,
             image_media=image_media,
-            image_url=image_url
+            image_url=image_url,
+            facebook_url=facebook_url,
+            instagram_url=instagram_url,
+            twitter_url=twitter_url,
+            linkedin_url=linkedin_url,
+            github_url=github_url
         )
         return Response(OurTeamSerializer(obj).data, status=status.HTTP_201_CREATED)
 
     def put(self, request, pk=None, slug=None, *args, **kwargs):
         obj = self.get_object(pk=pk, request=request)
         if not obj:
-            return Response({'error': 'OurTeam not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'OurTeam member not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if 'user_id' in request.data or 'user' in request.data:
+            user_input = request.data.get('user_id') or request.data.get('user')
+            if user_input is None or user_input == '' or user_input == 'null':
+                obj.user = None
+            else:
+                User = get_user_model()
+                user_id = user_input.get('id') if isinstance(user_input, dict) else user_input
+                try:
+                    obj.user = User.objects.get(pk=user_id)
+                except (User.DoesNotExist, ValueError):
+                    pass
 
         if 'name' in request.data:
             obj.name = request.data.get('name')
+        if 'phone_number' in request.data:
+            obj.phone_number = request.data.get('phone_number')
         if 'position' in request.data:
             obj.position = request.data.get('position')
+        if 'bio' in request.data:
+            obj.bio = request.data.get('bio')
         if 'image_url' in request.data:
             obj.image_url = request.data.get('image_url')
+        if 'facebook_url' in request.data:
+            obj.facebook_url = request.data.get('facebook_url')
+        if 'instagram_url' in request.data:
+            obj.instagram_url = request.data.get('instagram_url')
+        if 'twitter_url' in request.data:
+            obj.twitter_url = request.data.get('twitter_url')
+        if 'linkedin_url' in request.data:
+            obj.linkedin_url = request.data.get('linkedin_url')
+        if 'github_url' in request.data:
+            obj.github_url = request.data.get('github_url')
 
         if 'image_media' in request.data or 'image_media_id' in request.data:
             media_input = request.data.get('image_media_id') or request.data.get('image_media')
@@ -782,7 +838,7 @@ class OurTeamView(APIView):
     def delete(self, request, pk=None, slug=None, *args, **kwargs):
         obj = self.get_object(pk=pk, request=request)
         if not obj:
-            return Response({'error': 'OurTeam not found.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'OurTeam member not found.'}, status=status.HTTP_404_NOT_FOUND)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 

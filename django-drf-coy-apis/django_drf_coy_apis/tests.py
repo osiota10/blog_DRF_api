@@ -102,16 +102,23 @@ class CorporateAPICRUDTests(TestCase):
         self.assertEqual(res.status_code, status.HTTP_204_NO_CONTENT)
 
     def test_our_team_crud(self):
-        # Create
+        # Create without user (fallback to name & phone_number)
         res = self.client.post('/django_drf_coy_apis/our-teams/', {
             'name': 'John Doe',
-            'position': 'Lead Architect'
+            'phone_number': '+123456789',
+            'position': 'Lead Architect',
+            'bio': '<p>Experienced developer</p>',
+            'facebook_url': 'https://facebook.com/johndoe',
+            'github_url': 'https://github.com/johndoe'
         })
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         team_id = res.data['id']
+        self.assertEqual(res.data['display_name'], 'John Doe')
+        self.assertEqual(res.data['display_phone_number'], '+123456789')
 
-        # Update
+        # Link to authenticated user
         res = self.client.patch(f'/django_drf_coy_apis/our-teams/{team_id}/', {
+            'user_id': self.user.id,
             'position': 'CTO'
         })
         self.assertEqual(res.status_code, status.HTTP_200_OK)
