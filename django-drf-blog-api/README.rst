@@ -4,7 +4,7 @@ django-drf-blog-api
 
 A reusable Django REST Framework blog and magazine API package with support for articles, magazine series editions, categories, tags, author profiles, backdated publications (``pub_date``), comments, likes, and Cloudinary / MediaAsset integration.
 
-Current Version: **0.2.2**
+Current Version: **0.2.3**
 
 Quick Start
 -----------

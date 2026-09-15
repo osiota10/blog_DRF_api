@@ -5,7 +5,7 @@ from .serializer import *
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.authtoken.serializers import AuthTokenSerializer
-from rest_framework.permissions import AllowAny, IsAuthenticated, BasePermission, SAFE_METHODS
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly, BasePermission, SAFE_METHODS
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from djoser.views import UserViewSet
 from rest_framework.views import APIView
@@ -39,17 +39,58 @@ class TagView(generics.ListAPIView):
 from media_library.models import MediaAsset
 
 
-class MagazineSeriesListView(generics.ListAPIView):  # Public
+class MagazineSeriesListView(generics.ListCreateAPIView):  # Public List; Authenticated or IsAuthenticatedOrReadOnly Create
     queryset = MagazineSeries.objects.all()
     serializer_class = MagazineSeriesSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        cover_media_id = self.request.data.get('cover_media_id') or self.request.data.get('cover_media')
+        cover_media = None
+        if cover_media_id:
+            try:
+                cover_media = MediaAsset.objects.get(id=cover_media_id)
+            except (MediaAsset.DoesNotExist, ValueError):
+                pass
+        if cover_media:
+            serializer.save(cover_media=cover_media)
+        else:
+            serializer.save()
 
 
-class MagazineSeriesDetailView(generics.RetrieveAPIView):  # Public
+class MagazineSeriesDetailView(generics.RetrieveUpdateDestroyAPIView):  # Public GET; Authenticated PUT/PATCH/DELETE
     lookup_field = 'slug'
     queryset = MagazineSeries.objects.all()
     serializer_class = MagazineSeriesSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_object(self):
+        queryset = self.filter_queryset(self.get_queryset())
+        val = self.kwargs.get('slug') or self.kwargs.get('pk') or (self.request.query_params.get('id') if hasattr(self.request, 'query_params') else None) or (self.request.data.get('id') if hasattr(self.request, 'data') else None)
+        if val:
+            if str(val).isdigit():
+                obj = queryset.filter(pk=val).first()
+                if obj:
+                    self.check_object_permissions(self.request, obj)
+                    return obj
+            obj = queryset.filter(slug=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+        return super().get_object()
+
+    def perform_update(self, serializer):
+        cover_media_id = self.request.data.get('cover_media_id') or self.request.data.get('cover_media')
+        cover_media = None
+        if cover_media_id:
+            try:
+                cover_media = MediaAsset.objects.get(id=cover_media_id)
+            except (MediaAsset.DoesNotExist, ValueError):
+                pass
+        if cover_media:
+            serializer.save(cover_media=cover_media)
+        else:
+            serializer.save()
 
 
 class IsSuperAdminOrOwnerOrReadOnly(BasePermission):
