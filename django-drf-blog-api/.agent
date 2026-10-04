@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.0) & `django-drf-coy-apis` (v0.3.8)
+# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.0)
 
-Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn).
+A reusable Django REST Framework package providing corporate blog management, magazine series publishing, author profiles, comments, likes, and **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn).
 
 ---
 
@@ -14,9 +14,9 @@ Authorization: Bearer <your_jwt_access_token>
 
 ---
 
-## 📰 Blog & Social Auto-Poster API (`django_drf_blog_api`)
+## 🌐 API Endpoint Reference
 
-### 1. Blog Articles (`Post`)
+### 1. Blog Posts (`Post`)
 * **List Posts:** `GET /django_drf_blog_api/post-list`
 * **Detail by Slug:** `GET /django_drf_blog_api/post-list/{slug}`
 * **Create Post (Author/Admin):** `POST /django_drf_blog_api/post`
@@ -40,9 +40,11 @@ Authorization: Bearer <your_jwt_access_token>
 
 ---
 
-### 2. Social Auto-Poster Logs
+### 2. Social Media Auto-Poster Log Inspection
+Every auto-post attempt logs execution details in `social_logs`:
 * **List Logs:** `GET /django_drf_blog_api/social-logs/`
 
+#### Sample Response:
 ```json
 [
   {
@@ -68,7 +70,9 @@ Authorization: Bearer <your_jwt_access_token>
 
 ---
 
-## ⚙️ Environment Setup (`.env`)
+## ⚙️ Environment Configuration (`.env`)
+
+Add the following to your project's `.env` file to enable social media auto-posting:
 
 ```env
 FRONTEND_SITE_URL=https://yourdomain.com
