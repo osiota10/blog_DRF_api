@@ -1,4 +1,4 @@
-from . models import *
+from .models import *
 from django.contrib import admin
 
 
@@ -10,3 +10,5 @@ admin.site.register(MagazineSeries)
 admin.site.register(Post)
 admin.site.register(Comment)
 admin.site.register(Like)
+admin.site.register(SocialPlatformConfig)
+admin.site.register(SocialPostLog)

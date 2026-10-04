@@ -10,6 +10,7 @@ django_drf_blog_api/apps.py
 django_drf_blog_api/models.py
 django_drf_blog_api/serializer.py
 django_drf_blog_api/signals.py
+django_drf_blog_api/social_posters.py
 django_drf_blog_api/tests.py
 django_drf_blog_api/urls.py
 django_drf_blog_api/utils.py
@@ -27,4 +28,5 @@ django_drf_blog_api/migrations/0005_post_updated_at.py
 django_drf_blog_api/migrations/0006_magazineseries_post_magazine_series.py
 django_drf_blog_api/migrations/0007_alter_post_pub_date.py
 django_drf_blog_api/migrations/0008_alter_post_options_author_bio.py
+django_drf_blog_api/migrations/0009_socialplatformconfig_socialpostlog.py
 django_drf_blog_api/migrations/__init__.py

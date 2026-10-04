@@ -85,6 +85,18 @@ class MagazineSeriesSerializer(serializers.ModelSerializer):
         )
 
 
+class SocialPlatformConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialPlatformConfig
+        fields = '__all__'
+
+
+class SocialPostLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialPostLog
+        fields = '__all__'
+
+
 class PostSerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
@@ -102,6 +114,8 @@ class PostSerializer(serializers.ModelSerializer):
     readTime = serializers.IntegerField(source='read_time', read_only=True)
     total_comments = serializers.SerializerMethodField()
     total_likes = serializers.SerializerMethodField()
+
+    social_logs = SocialPostLogSerializer(many=True, read_only=True)
 
     class Meta:
         model = Post
@@ -128,6 +142,7 @@ class PostSerializer(serializers.ModelSerializer):
             'featured_image',
             'total_comments',
             'total_likes',
+            'social_logs',
             'safe_post_content_html')
 
     def get_total_comments(self, obj):
@@ -150,3 +165,4 @@ class LikeSerializer(serializers.ModelSerializer):
 
     def get_content_object(self, obj):
         return str(obj.content_object)
+

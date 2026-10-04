@@ -292,3 +292,32 @@ CKEDITOR_5_CONFIGS = {
         }
     }
 }
+
+
+# Social Media Auto-Poster Configuration (using django-environ)
+SOCIAL_AUTO_POST = {
+    'FRONTEND_SITE_URL': env.str('FRONTEND_SITE_URL', default='https://yourdomain.com'),
+    'FACEBOOK': {
+        'ENABLED': env.bool('FACEBOOK_AUTO_POST_ENABLED', default=False),
+        'PAGE_ID': env.str('FACEBOOK_PAGE_ID', default=''),
+        'ACCESS_TOKEN': env.str('FACEBOOK_PAGE_ACCESS_TOKEN', default=''),
+    },
+    'INSTAGRAM': {
+        'ENABLED': env.bool('INSTAGRAM_AUTO_POST_ENABLED', default=False),
+        'ACCOUNT_ID': env.str('INSTAGRAM_ACCOUNT_ID', default=''),
+        'ACCESS_TOKEN': env.str('INSTAGRAM_ACCESS_TOKEN', default=''),
+    },
+    'TWITTER': {
+        'ENABLED': env.bool('TWITTER_AUTO_POST_ENABLED', default=False),
+        'BEARER_TOKEN': env.str('TWITTER_BEARER_TOKEN', default=''),
+        'API_KEY': env.str('TWITTER_API_KEY', default=''),
+        'API_SECRET': env.str('TWITTER_API_SECRET', default=''),
+        'ACCESS_TOKEN': env.str('TWITTER_ACCESS_TOKEN', default=''),
+        'ACCESS_TOKEN_SECRET': env.str('TWITTER_ACCESS_TOKEN_SECRET', default=''),
+    },
+    'LINKEDIN': {
+        'ENABLED': env.bool('LINKEDIN_AUTO_POST_ENABLED', default=False),
+        'ORGANIZATION_ID': env.str('LINKEDIN_ORGANIZATION_ID', default=''),
+        'ACCESS_TOKEN': env.str('LINKEDIN_ACCESS_TOKEN', default=''),
+    },
+}

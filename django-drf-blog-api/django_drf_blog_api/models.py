@@ -142,3 +142,50 @@ class Like(models.Model):
 
     def __str__(self):
         return f"Like by {self.user} on {self.content_object} at {self.created_at}"
+
+
+class SocialPlatformConfig(models.Model):
+    PLATFORM_CHOICES = [
+        ('facebook', 'Facebook Page'),
+        ('instagram', 'Instagram Business'),
+        ('twitter', 'X / Twitter'),
+        ('linkedin', 'LinkedIn'),
+    ]
+    platform = models.CharField(max_length=20, choices=PLATFORM_CHOICES, unique=True)
+    is_enabled = models.BooleanField(default=True)
+    access_token = models.TextField(blank=True, null=True, help_text="OAuth access token (Leave blank to use .env)")
+    refresh_token = models.TextField(blank=True, null=True)
+    page_or_account_id = models.CharField(max_length=255, blank=True, null=True, help_text="e.g. Page ID, IG Account ID")
+    api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Used for Twitter API key")
+    api_secret = models.CharField(max_length=255, blank=True, null=True, help_text="Used for Twitter API Secret")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_platform_display()} ({'Enabled' if self.is_enabled else 'Disabled'})"
+
+    class Meta:
+        verbose_name = "Social Platform Config"
+        verbose_name_plural = "Social Platform Configs"
+
+
+class SocialPostLog(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('published', 'Published'),
+        ('failed', 'Failed'),
+    ]
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='social_logs')
+    platform = models.CharField(max_length=20)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    external_post_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID returned by social platform")
+    external_post_url = models.URLField(blank=True, null=True)
+    error_message = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.post.title} -> {self.platform} ({self.status})"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Social Post Log"
+        verbose_name_plural = "Social Post Logs"

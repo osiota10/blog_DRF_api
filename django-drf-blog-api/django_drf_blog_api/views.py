@@ -448,3 +448,21 @@ class TotalLikesView(APIView):
         ).count()
 
         return Response({'total_likes': total_likes}, status=status.HTTP_200_OK)
+
+
+class SocialPlatformConfigView(generics.ListCreateAPIView):
+    queryset = SocialPlatformConfig.objects.all()
+    serializer_class = SocialPlatformConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class SocialPlatformConfigDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = SocialPlatformConfig.objects.all()
+    serializer_class = SocialPlatformConfigSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class SocialPostLogView(generics.ListAPIView):
+    queryset = SocialPostLog.objects.all()
+    serializer_class = SocialPostLogSerializer
+    permission_classes = [IsAuthenticated]

@@ -28,4 +28,10 @@ urlpatterns = [
     path('post', PostView.as_view()),  # Authors
     path('comment', CommentView.as_view()),
     path('like', LikeView.as_view()),
+    path('social-configs', SocialPlatformConfigView.as_view()),
+    path('social-configs/', SocialPlatformConfigView.as_view()),
+    path('social-configs/<int:pk>', SocialPlatformConfigDetailView.as_view()),
+    path('social-configs/<int:pk>/', SocialPlatformConfigDetailView.as_view()),
+    path('social-logs', SocialPostLogView.as_view()),
+    path('social-logs/', SocialPostLogView.as_view()),
 ]
