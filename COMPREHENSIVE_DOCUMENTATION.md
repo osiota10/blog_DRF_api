@@ -23,9 +23,11 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-drf-blog-api`** | **`0.2.2`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`). |
-| **`django-drf-coy-apis`** | **`0.2.0`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Photo Gallery, YouTube Videos, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
+| **`django-social-autoposter`** | **`0.1.0`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
+| **`django-drf-blog-api`** | **`0.3.0`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
+| **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
+
 
 ---
 
@@ -60,6 +62,7 @@ INSTALLED_APPS = [
     'media_library',
     'django_drf_blog_api',
     'django_drf_coy_apis',
+    'django_social_autoposter',
 ]
 ```
 
@@ -93,6 +96,7 @@ urlpatterns = [
     # Package APIs
     path('django_drf_blog_api/', include('django_drf_blog_api.urls')),
     path('django_drf_coy_apis/', include('django_drf_coy_apis.urls')),
+    path('social/', include('django_social_autoposter.urls')),
     path('media-library/', include('media_library.urls')),
 
     # Auth APIs (Djoser + JWT)
@@ -419,3 +423,59 @@ export const ServicesDashboard: React.FC = () => {
   );
 };
 ```
+
+---
+
+## 7. Social Media Auto-Poster Reference (`django_social_autoposter`)
+
+A standalone package to broadcast content simultaneously to **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn**.
+
+### ⚙️ Environment Configuration (`.env`)
+```env
+FRONTEND_SITE_URL=https://yourdomain.com
+
+# Facebook Page
+FACEBOOK_AUTO_POST_ENABLED=True
+FACEBOOK_PAGE_ID=109876543210
+FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
+
+# Instagram Business (Requires featured image)
+INSTAGRAM_AUTO_POST_ENABLED=True
+INSTAGRAM_ACCOUNT_ID=17841400000000000
+INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# X / Twitter API v2
+TWITTER_AUTO_POST_ENABLED=True
+TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAA...
+
+# LinkedIn API v2
+LINKEDIN_AUTO_POST_ENABLED=True
+LINKEDIN_ORGANIZATION_ID=987654321
+LINKEDIN_ACCESS_TOKEN=AQX...
+```
+
+### 📡 REST API Reference
+
+| Endpoint | Method | Description |
+| :--- | :--- | :--- |
+| `/social/broadcast/` | `GET` | List past broadcast campaigns and logs. |
+| `/social/broadcast/` | `POST` | Compose and broadcast a post to all or selected platforms. |
+| `/social/broadcast/<id>/` | `GET` | Detail of a specific broadcast with live external post URLs. |
+| `/social/logs/` | `GET` | Filter logs by `?platform=facebook&status=published`. |
+| `/social/configs/` | `GET`, `POST` | Manage DB platform credentials overrides. |
+
+### 🐍 Python Service Usage in Any Django App
+```python
+from django_social_autoposter.services import SocialBroadcastService
+
+# Single-line broadcast to Facebook, Instagram, Twitter, and LinkedIn:
+broadcast = SocialBroadcastService.broadcast(
+    title="Product Announcement",
+    message="We are proud to introduce our latest product release.",
+    link_url="https://example.com/products/1",
+    image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
+    platforms=['facebook', 'twitter', 'linkedin', 'instagram'], # or None for all enabled
+    source_instance=product_instance  # Optional: attaches audit log via GenericForeignKey
+)
+```
+
