@@ -25,6 +25,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('django_drf_blog_api/', include('django_drf_blog_api.urls')),
     path('django_drf_coy_apis/', include('django_drf_coy_apis.urls')),
+    path('social/', include('django_social_autoposter.urls')),
     path('media-library/', include('media_library.urls')),
     path('auth/', include('djoser.urls')),
     path('auth/', include('djoser.urls.jwt')),

@@ -43,6 +43,7 @@ ALLOWED_HOSTS = []
 
 import sys
 sys.path.append(os.path.join(BASE_DIR, 'django-drf-coy-apis'))
+sys.path.append(os.path.join(BASE_DIR, 'django-social-autoposter'))
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_drf_blog_api',
     'django_drf_coy_apis',
+    'django_social_autoposter',
     'accounts',
     'media_library',
     'django_ckeditor_5',

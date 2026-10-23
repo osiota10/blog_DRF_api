@@ -1,0 +1,62 @@
+=======================
+django-social-autoposter
+=======================
+
+A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+
+Current Version: **0.1.0**
+
+Quick Start
+-----------
+
+1. Installation
+~~~~~~~~~~~~~~~
+.. code-block:: bash
+
+    pip install django-social-autoposter
+
+2. Configure ``INSTALLED_APPS``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In your Django ``settings.py``:
+
+.. code-block:: python
+
+    INSTALLED_APPS = [
+        ...,
+        'rest_framework',
+        'django_social_autoposter',
+    ]
+
+3. Add URL Patterns
+~~~~~~~~~~~~~~~~~~~
+In your Django ``urls.py``:
+
+.. code-block:: python
+
+    from django.urls import path, include
+
+    urlpatterns = [
+        path('social/', include('django_social_autoposter.urls')),
+    ]
+
+4. Run Migrations
+~~~~~~~~~~~~~~~~~
+.. code-block:: bash
+
+    python manage.py migrate
+
+Python Service Usage
+--------------------
+
+.. code-block:: python
+
+    from django_social_autoposter.services import SocialBroadcastService
+
+    broadcast = SocialBroadcastService.broadcast(
+        title="Product Launch",
+        message="Check out our new release!",
+        link_url="https://example.com/product",
+        image_url="https://example.com/image.jpg",
+        platforms=['facebook', 'twitter', 'linkedin', 'instagram'],
+        source_instance=my_instance
+    )

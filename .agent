@@ -60,11 +60,52 @@ Authorization: Bearer <your_jwt_access_token>
 
 ---
 
+---
+
 ### 3. Magazine Series (`MagazineSeries`)
 * **List Magazines:** `GET /django_drf_blog_api/magazines/`
 * **Detail by Slug or ID:** `GET /django_drf_blog_api/magazines/{slug_or_id}/`
 * **Create Magazine:** `POST /django_drf_blog_api/magazines/`
 * **Update Magazine:** `PATCH /django_drf_blog_api/magazines/{slug_or_id}/`
+
+---
+
+## 📢 Standalone Social Media Auto-Poster (`django_social_autoposter`)
+
+A decoupled package for broadcasting posts simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn.
+
+### 1. Direct Compose & Broadcast Endpoint
+* **Endpoint:** `POST /social/broadcast/`
+* **Payload:**
+```json
+{
+  "title": "Exciting Announcement",
+  "message": "We have just released our new platform features! Check it out now.",
+  "link_url": "https://example.com/announcement",
+  "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "platforms": ["facebook", "twitter", "linkedin", "instagram"]
+}
+```
+*(Leave `platforms` null/empty to broadcast to all enabled platforms).*
+
+### 2. Broadcast History & Per-Platform Audit Logs
+* **List Broadcasts:** `GET /social/broadcast/`
+* **Broadcast Detail:** `GET /social/broadcast/{id}/`
+* **Filter Execution Logs:** `GET /social/logs/?platform=facebook&status=published`
+
+### 3. Python Service Usage in Any Django App
+```python
+from django_social_autoposter.services import SocialBroadcastService
+
+broadcast = SocialBroadcastService.broadcast(
+    title="Product Launch",
+    message="We are proud to introduce our latest updates.",
+    link_url="https://example.com/products/item",
+    image_url="https://example.com/image.png",
+    platforms=['facebook', 'twitter', 'linkedin', 'instagram'],
+    source_instance=product_instance  # Generic relation
+)
+```
 
 ---
 

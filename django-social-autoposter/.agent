@@ -1,0 +1,76 @@
+# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.1.0)
+
+A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, X (Twitter), LinkedIn, and more.
+
+---
+
+## 🔒 Authentication
+All endpoints require DRF token authentication:
+```http
+Authorization: Token <user_token>
+# OR
+Authorization: Bearer <jwt_access_token>
+```
+
+---
+
+## 📡 REST API Endpoints
+
+### 1. Broadcast Post to All / Selected Platforms
+* **Endpoint:** `POST /social/broadcast/`
+* **Request Payload:**
+```json
+{
+  "title": "Exciting Announcement",
+  "message": "We have just released our new platform features! Check it out now.",
+  "link_url": "https://example.com/announcement",
+  "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "platforms": ["facebook", "twitter", "linkedin", "instagram"]
+}
+```
+> **Tip:** You can omit the `"platforms"` array or pass `null` to automatically post to all platforms currently enabled in `.env` or the database.
+
+* **Response (HTTP 201 Created):**
+```json
+{
+  "id": 1,
+  "title": "Exciting Announcement",
+  "message": "We have just released our new platform features! Check it out now.",
+  "link_url": "https://example.com/announcement",
+  "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "target_platforms": ["facebook", "twitter", "linkedin", "instagram"],
+  "content_type": null,
+  "object_id": null,
+  "created_at": "2026-10-23T17:30:00Z",
+  "logs": [
+    {
+      "id": 1,
+      "broadcast": 1,
+      "platform": "facebook",
+      "status": "published",
+      "external_post_id": "109876543210_12345",
+      "external_post_url": "https://facebook.com/109876543210_12345",
+      "error_message": null,
+      "created_at": "2026-10-23T17:30:02Z"
+    },
+    {
+      "id": 2,
+      "broadcast": 1,
+      "platform": "twitter",
+      "status": "published",
+      "external_post_id": "1840000000000000000",
+      "external_post_url": "https://x.com/i/web/status/1840000000000000000",
+      "error_message": null,
+      "created_at": "2026-10-23T17:30:02Z"
+    }
+  ]
+}
+```
+
+### 2. View Broadcast History
+* **Endpoint:** `GET /social/broadcast/`
+* Returns all past broadcasts with nested status logs.
+
+### 3. Filter Execution Logs
+* **Endpoint:** `GET /social/logs/?platform=facebook&status=failed`
+* Filters audit logs by platform (`facebook`, `instagram`, `twitter`, `linkedin`) or status (`published`, `failed`, `pending`, `skipped`).
