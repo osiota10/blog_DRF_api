@@ -1,6 +1,6 @@
-=======================
+========================
 django-social-autoposter
-=======================
+========================
 
 A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
