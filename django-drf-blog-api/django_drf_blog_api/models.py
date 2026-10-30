@@ -158,6 +158,10 @@ class SocialPlatformConfig(models.Model):
     page_or_account_id = models.CharField(max_length=255, blank=True, null=True, help_text="e.g. Page ID, IG Account ID")
     api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Used for Twitter API key")
     api_secret = models.CharField(max_length=255, blank=True, null=True, help_text="Used for Twitter API Secret")
+    access_token_secret = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Twitter OAuth 1.0a Access Token Secret (required with API key/secret and access token)"
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):

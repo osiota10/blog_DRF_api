@@ -1,4 +1,4 @@
-# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.0)
+# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.1)
 
 A reusable Django REST Framework package providing corporate blog management, magazine series publishing, author profiles, comments, likes, and **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn).
 
@@ -86,7 +86,10 @@ INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
 
 TWITTER_AUTO_POST_ENABLED=True
-TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAA...
+TWITTER_API_KEY=your_consumer_key
+TWITTER_API_SECRET=your_consumer_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 
 LINKEDIN_AUTO_POST_ENABLED=True
 LINKEDIN_ORGANIZATION_ID=987654321

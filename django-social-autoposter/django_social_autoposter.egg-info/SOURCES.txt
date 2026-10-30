@@ -40,6 +40,8 @@ django_social_autoposter/adapters/__pycache__/instagram.cpython-313.pyc
 django_social_autoposter/adapters/__pycache__/linkedin.cpython-313.pyc
 django_social_autoposter/adapters/__pycache__/twitter.cpython-313.pyc
 django_social_autoposter/migrations/0001_initial.py
+django_social_autoposter/migrations/0002_socialplatformconfig_access_token_secret_and_more.py
 django_social_autoposter/migrations/__init__.py
 django_social_autoposter/migrations/__pycache__/0001_initial.cpython-313.pyc
+django_social_autoposter/migrations/__pycache__/0002_socialplatformconfig_access_token_secret_and_more.cpython-313.pyc
 django_social_autoposter/migrations/__pycache__/__init__.cpython-313.pyc

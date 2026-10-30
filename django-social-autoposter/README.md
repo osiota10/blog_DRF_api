@@ -2,7 +2,7 @@
 
 A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.1.0`**
+Current Version: **`0.1.1`**
 
 ---
 
@@ -74,7 +74,43 @@ SOCIAL_AUTO_POST = {
 }
 ```
 
-### 4. Include URL Patterns
+### 4. Setup `.env` File
+Create or update `.env` in your project root:
+
+```env
+# Frontend Base URL
+FRONTEND_SITE_URL=https://yourdomain.com
+
+# Facebook Page API
+FACEBOOK_AUTO_POST_ENABLED=True
+FACEBOOK_PAGE_ID=109876543210
+FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
+
+# Instagram Business API (Requires image on broadcast)
+INSTAGRAM_AUTO_POST_ENABLED=True
+INSTAGRAM_ACCOUNT_ID=17841400000000000
+INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# Twitter / X API v2 (OAuth 1.0a User Context)
+TWITTER_AUTO_POST_ENABLED=True
+TWITTER_API_KEY=your_consumer_key
+TWITTER_API_SECRET=your_consumer_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
+
+# LinkedIn API v2
+LINKEDIN_AUTO_POST_ENABLED=True
+LINKEDIN_ORGANIZATION_ID=987654321
+LINKEDIN_ACCESS_TOKEN=AQX...
+```
+
+> **Important Twitter / X API v2 Authentication Note**:
+> Twitter's `POST /2/tweets` endpoint **rejects OAuth 2.0 Application-Only Bearer Tokens** with `403 Forbidden` (`"Authenticating with OAuth 2.0 Application-Only is forbidden for this endpoint"`).
+> To post tweets on behalf of an account, you must provide **OAuth 1.0a User Context** tokens (all 4: `API_KEY`, `API_SECRET`, `ACCESS_TOKEN`, `ACCESS_TOKEN_SECRET`) or an OAuth 2.0 User Context Access Token.
+>
+> ⚠️ **Developer Portal Setting**: In your [X Developer Portal](https://developer.x.com/) under Project & App settings -> **User authentication settings**, ensure the app permissions are set to **"Read and write"** *before* generating or regenerating the Access Token and Access Token Secret. Tokens created under "Read-only" permissions cannot publish tweets!
+
+### 5. Include URL Patterns
 In your Django `urls.py`:
 
 ```python
@@ -85,7 +121,7 @@ urlpatterns = [
 ]
 ```
 
-### 5. Run Migrations
+### 6. Run Migrations
 ```bash
 python manage.py migrate
 ```

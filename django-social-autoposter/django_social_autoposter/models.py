@@ -20,7 +20,11 @@ class SocialPlatformConfig(models.Model):
     )
     api_key = models.CharField(max_length=255, blank=True, null=True, help_text="Twitter API Consumer Key")
     api_secret = models.CharField(max_length=255, blank=True, null=True, help_text="Twitter API Consumer Secret")
-    bearer_token = models.TextField(blank=True, null=True, help_text="Twitter Bearer Token")
+    access_token_secret = models.CharField(
+        max_length=255, blank=True, null=True,
+        help_text="Twitter OAuth 1.0a Access Token Secret (required with API key/secret and access token)"
+    )
+    bearer_token = models.TextField(blank=True, null=True, help_text="Twitter Bearer Token / OAuth 2.0 User Access Token")
     extra_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

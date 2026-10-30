@@ -9,17 +9,78 @@ class TwitterAdapter(BaseSocialAdapter):
     platform_name = "twitter"
 
     def publish(self, broadcast) -> dict:
-        bearer_token = self.creds.get('bearer_token') or self.creds.get('access_token')
         api_key = self.creds.get('api_key')
         api_secret = self.creds.get('api_secret')
+        access_token = self.creds.get('access_token')
         access_token_secret = self.creds.get('access_token_secret')
+        bearer_token = self.creds.get('bearer_token')
 
-        if not bearer_token and not (api_key and self.creds.get('access_token')):
+        auth = None
+        headers = {"Content-Type": "application/json"}
+
+        # Twitter/X API v2 (POST /2/tweets) strictly requires User Context authentication.
+        # Option 1: OAuth 1.0a User Context (most common for bot/automated posting)
+        is_oauth1_attempt = bool(api_key or access_token_secret)
+
+        if is_oauth1_attempt:
+            missing_keys = []
+            if not api_key:
+                missing_keys.append("api_key (TWITTER_API_KEY)")
+            if not api_secret:
+                missing_keys.append("api_secret (TWITTER_API_SECRET)")
+            if not access_token:
+                missing_keys.append("access_token (TWITTER_ACCESS_TOKEN)")
+            if not access_token_secret:
+                missing_keys.append("access_token_secret (TWITTER_ACCESS_TOKEN_SECRET)")
+
+            if missing_keys:
+                return {
+                    'success': False,
+                    'post_id': None,
+                    'post_url': None,
+                    'error': (
+                        f"Missing Twitter OAuth 1.0a credentials: {', '.join(missing_keys)}. "
+                        "POST /2/tweets requires User Context. Ensure your Twitter App has 'Read and Write' "
+                        "permissions enabled in Developer Portal before generating Access Token & Secret."
+                    ),
+                    'raw_response': None
+                }
+
+            try:
+                from requests_oauthlib import OAuth1
+            except ImportError:
+                return {
+                    'success': False,
+                    'post_id': None,
+                    'post_url': None,
+                    'error': (
+                        "Library 'requests-oauthlib' is required for Twitter OAuth 1.0a User Context. "
+                        "Install it with: pip install requests-oauthlib"
+                    ),
+                    'raw_response': None
+                }
+
+            auth = OAuth1(
+                api_key,
+                client_secret=api_secret,
+                resource_owner_key=access_token,
+                resource_owner_secret=access_token_secret
+            )
+
+        # Option 2: OAuth 2.0 User Access Token (with tweet.write scope)
+        elif bearer_token or access_token:
+            token = bearer_token or access_token
+            headers["Authorization"] = f"Bearer {token}"
+        else:
             return {
                 'success': False,
                 'post_id': None,
                 'post_url': None,
-                'error': 'Missing X / Twitter credentials (Bearer Token or OAuth Keys)',
+                'error': (
+                    "Missing X / Twitter credentials. POST /2/tweets requires User Context authentication: "
+                    "either OAuth 1.0a (API Key, API Secret, Access Token, and Access Token Secret with "
+                    "'Read and Write' permissions) or an OAuth 2.0 User Access Token with 'tweet.write' scope."
+                ),
                 'raw_response': None
             }
 
@@ -27,26 +88,9 @@ class TwitterAdapter(BaseSocialAdapter):
         text = self.build_text_message(broadcast, max_length=280)
         json_payload = {"text": text}
 
-        headers = {"Content-Type": "application/json"}
-        auth = None
-
-        if api_key and api_secret and self.creds.get('access_token') and access_token_secret:
-            try:
-                from requests_oauthlib import OAuth1
-                auth = OAuth1(
-                    api_key,
-                    client_secret=api_secret,
-                    resource_owner_key=self.creds.get('access_token'),
-                    resource_owner_secret=access_token_secret
-                )
-            except ImportError:
-                headers["Authorization"] = f"Bearer {bearer_token}"
-        else:
-            headers["Authorization"] = f"Bearer {bearer_token}"
-
         try:
             res = requests.post(url, json=json_payload, headers=headers, auth=auth, timeout=20)
-            data = res.json()
+            data = res.json() if res.content else {}
 
             if res.status_code == 201 and 'data' in data:
                 tweet_id = data['data']['id']
@@ -59,11 +103,24 @@ class TwitterAdapter(BaseSocialAdapter):
                 }
 
             error_detail = data.get('detail') or data.get('errors') or str(data)
+
+            # Detect App-Only Bearer token usage and provide explicit diagnostics
+            if "Application-Only" in str(error_detail) or res.status_code == 403:
+                error_msg = (
+                    f"X / Twitter API Error ({res.status_code}): {error_detail}. "
+                    "Notice: Bearer Token alone (App-Only) is forbidden for POST /2/tweets. "
+                    "You must use OAuth 1.0a User Context tokens (API Key, API Secret, Access Token, "
+                    "and Access Token Secret) with 'Read and write' permissions enabled under User "
+                    "authentication settings, or an OAuth 2.0 User Access Token."
+                )
+            else:
+                error_msg = f"X / Twitter API Error ({res.status_code}): {error_detail}"
+
             return {
                 'success': False,
                 'post_id': None,
                 'post_url': None,
-                'error': f"X / Twitter API Error ({res.status_code}): {error_detail}",
+                'error': error_msg,
                 'raw_response': data
             }
         except Exception as e:

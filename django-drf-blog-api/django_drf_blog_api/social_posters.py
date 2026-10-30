@@ -28,6 +28,7 @@ def get_platform_credentials(platform_name: str) -> dict:
                 'page_or_account_id': db_config.page_or_account_id or env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('ORGANIZATION_ID', ''),
                 'api_key': db_config.api_key or env_config.get('API_KEY', ''),
                 'api_secret': db_config.api_secret or env_config.get('API_SECRET', ''),
+                'access_token_secret': getattr(db_config, 'access_token_secret', None) or env_config.get('ACCESS_TOKEN_SECRET', ''),
                 'bearer_token': env_config.get('BEARER_TOKEN', ''),
             }
     except Exception as e:
@@ -40,6 +41,7 @@ def get_platform_credentials(platform_name: str) -> dict:
         'page_or_account_id': env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('ORGANIZATION_ID', ''),
         'api_key': env_config.get('API_KEY', ''),
         'api_secret': env_config.get('API_SECRET', ''),
+        'access_token_secret': env_config.get('ACCESS_TOKEN_SECRET', ''),
         'bearer_token': env_config.get('BEARER_TOKEN', ''),
     }
 
@@ -124,23 +126,96 @@ class InstagramPoster(BaseSocialPoster):
 
 class XPoster(BaseSocialPoster):
     def publish(self, post, article_url: str) -> dict:
-        bearer_token = self.creds.get('bearer_token') or self.creds.get('access_token')
-        if not bearer_token:
-            return {'success': False, 'error': 'Missing X / Twitter Bearer Token or Access Token'}
+        api_key = self.creds.get('api_key')
+        api_secret = self.creds.get('api_secret')
+        access_token = self.creds.get('access_token')
+        access_token_secret = self.creds.get('access_token_secret')
+        bearer_token = self.creds.get('bearer_token')
+
+        auth = None
+        headers = {"Content-Type": "application/json"}
+
+        # Twitter/X API v2 (POST /2/tweets) strictly requires User Context authentication.
+        is_oauth1_attempt = bool(api_key or access_token_secret)
+
+        if is_oauth1_attempt:
+            missing_keys = []
+            if not api_key:
+                missing_keys.append("api_key (TWITTER_API_KEY)")
+            if not api_secret:
+                missing_keys.append("api_secret (TWITTER_API_SECRET)")
+            if not access_token:
+                missing_keys.append("access_token (TWITTER_ACCESS_TOKEN)")
+            if not access_token_secret:
+                missing_keys.append("access_token_secret (TWITTER_ACCESS_TOKEN_SECRET)")
+
+            if missing_keys:
+                return {
+                    'success': False,
+                    'error': (
+                        f"Missing Twitter OAuth 1.0a credentials: {', '.join(missing_keys)}. "
+                        "POST /2/tweets requires User Context. Ensure your Twitter App has 'Read and Write' "
+                        "permissions enabled in Developer Portal before generating Access Token & Secret."
+                    )
+                }
+
+            try:
+                from requests_oauthlib import OAuth1
+            except ImportError:
+                return {
+                    'success': False,
+                    'error': (
+                        "Library 'requests-oauthlib' is required for Twitter OAuth 1.0a User Context. "
+                        "Install it with: pip install requests-oauthlib"
+                    )
+                }
+
+            auth = OAuth1(
+                api_key,
+                client_secret=api_secret,
+                resource_owner_key=access_token,
+                resource_owner_secret=access_token_secret
+            )
+        elif bearer_token or access_token:
+            token = bearer_token or access_token
+            headers["Authorization"] = f"Bearer {token}"
+        else:
+            return {
+                'success': False,
+                'error': (
+                    "Missing X / Twitter credentials. POST /2/tweets requires User Context authentication: "
+                    "either OAuth 1.0a (API Key, API Secret, Access Token, and Access Token Secret with "
+                    "'Read and Write' permissions) or an OAuth 2.0 User Access Token with 'tweet.write' scope."
+                )
+            }
 
         url = "https://api.twitter.com/2/tweets"
         text = f"{post.title}\n\n{article_url}"
-        headers = {
-            "Authorization": f"Bearer {bearer_token}",
-            "Content-Type": "application/json"
-        }
+        if len(text) > 280:
+            suffix = f"...\n{article_url}"
+            text = text[:max(0, 280 - len(suffix))].rstrip() + suffix
+
         try:
-            res = requests.post(url, json={"text": text}, headers=headers, timeout=15)
-            data = res.json()
+            res = requests.post(url, json={"text": text}, headers=headers, auth=auth, timeout=20)
+            data = res.json() if res.content else {}
+
             if res.status_code == 201 and 'data' in data:
                 tweet_id = data['data']['id']
                 return {'success': True, 'post_id': tweet_id, 'post_url': f"https://x.com/i/web/status/{tweet_id}"}
-            return {'success': False, 'error': str(data)}
+
+            error_detail = data.get('detail') or data.get('errors') or str(data)
+            if "Application-Only" in str(error_detail) or res.status_code == 403:
+                error_msg = (
+                    f"X / Twitter API Error ({res.status_code}): {error_detail}. "
+                    "Notice: Bearer Token alone (App-Only) is forbidden for POST /2/tweets. "
+                    "You must use OAuth 1.0a User Context tokens (API Key, API Secret, Access Token, "
+                    "and Access Token Secret) with 'Read and write' permissions enabled under User "
+                    "authentication settings, or an OAuth 2.0 User Access Token."
+                )
+            else:
+                error_msg = f"X / Twitter API Error ({res.status_code}): {error_detail}"
+
+            return {'success': False, 'error': error_msg}
         except Exception as e:
             return {'success': False, 'error': str(e)}
 

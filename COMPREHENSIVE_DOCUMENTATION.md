@@ -23,8 +23,8 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-social-autoposter`** | **`0.1.0`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
-| **`django-drf-blog-api`** | **`0.3.0`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
+| **`django-social-autoposter`** | **`0.1.1`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
+| **`django-drf-blog-api`** | **`0.3.1`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
 
@@ -444,15 +444,24 @@ INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
 
-# X / Twitter API v2
+# X / Twitter API v2 (OAuth 1.0a User Context)
 TWITTER_AUTO_POST_ENABLED=True
-TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAA...
+TWITTER_API_KEY=your_consumer_key
+TWITTER_API_SECRET=your_consumer_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 
 # LinkedIn API v2
 LINKEDIN_AUTO_POST_ENABLED=True
 LINKEDIN_ORGANIZATION_ID=987654321
 LINKEDIN_ACCESS_TOKEN=AQX...
 ```
+
+> **Important Twitter / X API v2 Authentication Note**:
+> Twitter's `POST /2/tweets` endpoint **rejects OAuth 2.0 Application-Only Bearer Tokens** with `403 Forbidden` (`"Authenticating with OAuth 2.0 Application-Only is forbidden for this endpoint"`).
+> To post tweets on behalf of an account, you must provide **OAuth 1.0a User Context** tokens (all 4: `API_KEY`, `API_SECRET`, `ACCESS_TOKEN`, `ACCESS_TOKEN_SECRET`) or an OAuth 2.0 User Context Access Token.
+>
+> ⚠️ **Developer Portal Setting**: In your [X Developer Portal](https://developer.x.com/) under Project & App settings -> **User authentication settings**, ensure the app permissions are set to **"Read and write"** *before* generating or regenerating the Access Token and Access Token Secret. Tokens created under "Read-only" permissions cannot publish tweets!
 
 ### 📡 REST API Reference
 

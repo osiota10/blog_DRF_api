@@ -2,7 +2,7 @@
 
 A production-ready, reusable Django REST Framework blog and magazine API package supporting articles, magazine series editions, categories, tags, author profiles, backdated publications (`pub_date`), nested comments, generic content likes, **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn via `django-environ`), and Cloudinary / MediaAsset integration.
 
-Current Version: **`0.3.0`**
+Current Version: **`0.3.1`**
 
 ---
 
@@ -103,15 +103,24 @@ INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
 
-# X / Twitter v2 API
+# X / Twitter v2 API (OAuth 1.0a User Context)
 TWITTER_AUTO_POST_ENABLED=True
-TWITTER_BEARER_TOKEN=AAAAAAAAAAAAAAAAAAAAA...
+TWITTER_API_KEY=your_consumer_key
+TWITTER_API_SECRET=your_consumer_secret
+TWITTER_ACCESS_TOKEN=your_access_token
+TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 
 # LinkedIn API v2
 LINKEDIN_AUTO_POST_ENABLED=True
 LINKEDIN_ORGANIZATION_ID=987654321
 LINKEDIN_ACCESS_TOKEN=AQX...
 ```
+
+> **Important Twitter / X API v2 Authentication Note**:
+> Twitter's `POST /2/tweets` endpoint **rejects OAuth 2.0 Application-Only Bearer Tokens** with `403 Forbidden` (`"Authenticating with OAuth 2.0 Application-Only is forbidden for this endpoint"`).
+> To post tweets automatically when articles are published, configure **OAuth 1.0a User Context** tokens (all 4: `API_KEY`, `API_SECRET`, `ACCESS_TOKEN`, `ACCESS_TOKEN_SECRET`) or an OAuth 2.0 User Context Access Token.
+>
+> ⚠️ **Developer Portal Setting**: In your [X Developer Portal](https://developer.x.com/) under Project & App settings -> **User authentication settings**, ensure the app permissions are set to **"Read and write"** *before* generating or regenerating the Access Token and Access Token Secret. Tokens created under "Read-only" permissions cannot publish tweets!
 
 ### 5. Include URL Routing
 In your project's `urls.py`:

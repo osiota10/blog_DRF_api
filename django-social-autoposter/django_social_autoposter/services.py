@@ -36,7 +36,7 @@ def get_platform_credentials(platform_name: str) -> dict:
                 'api_key': db_config.api_key or env_config.get('API_KEY', ''),
                 'api_secret': db_config.api_secret or env_config.get('API_SECRET', ''),
                 'bearer_token': db_config.bearer_token or env_config.get('BEARER_TOKEN', ''),
-                'access_token_secret': env_config.get('ACCESS_TOKEN_SECRET', ''),
+                'access_token_secret': getattr(db_config, 'access_token_secret', None) or env_config.get('ACCESS_TOKEN_SECRET', ''),
                 'extra_data': db_config.extra_data,
             }
     except Exception as e:

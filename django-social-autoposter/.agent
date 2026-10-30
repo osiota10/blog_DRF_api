@@ -1,4 +1,4 @@
-# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.1.0)
+# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.1.1)
 
 A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, X (Twitter), LinkedIn, and more.
 
@@ -74,3 +74,13 @@ Authorization: Bearer <jwt_access_token>
 ### 3. Filter Execution Logs
 * **Endpoint:** `GET /social/logs/?platform=facebook&status=failed`
 * Filters audit logs by platform (`facebook`, `instagram`, `twitter`, `linkedin`) or status (`published`, `failed`, `pending`, `skipped`).
+
+### 4. Twitter / X OAuth 1.0a User Context Requirements
+Twitter's `POST /2/tweets` endpoint requires **OAuth 1.0a User Context** tokens (or OAuth 2.0 User Context). Bearer Tokens (App-Only) are rejected with 403 Forbidden.
+Required tokens in `.env` or `SocialPlatformConfig`:
+- `TWITTER_API_KEY`: Consumer Key
+- `TWITTER_API_SECRET`: Consumer Secret
+- `TWITTER_ACCESS_TOKEN`: User Access Token
+- `TWITTER_ACCESS_TOKEN_SECRET`: User Access Token Secret
+
+⚠️ **Developer Portal Permission Warning**: In [developer.x.com](https://developer.x.com/) under Project & App settings -> **User authentication settings**, permissions must be set to **"Read and write"** before generating/regenerating the tokens.
