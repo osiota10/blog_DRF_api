@@ -25,7 +25,7 @@ def get_platform_credentials(platform_name: str) -> dict:
             return {
                 'enabled': True,
                 'access_token': db_config.access_token or env_config.get('ACCESS_TOKEN', ''),
-                'page_or_account_id': db_config.page_or_account_id or env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('ORGANIZATION_ID', ''),
+                'page_or_account_id': db_config.page_or_account_id or env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('USER_ID') or env_config.get('ORGANIZATION_ID', ''),
                 'api_key': db_config.api_key or env_config.get('API_KEY', ''),
                 'api_secret': db_config.api_secret or env_config.get('API_SECRET', ''),
                 'access_token_secret': getattr(db_config, 'access_token_secret', None) or env_config.get('ACCESS_TOKEN_SECRET', ''),
@@ -38,7 +38,7 @@ def get_platform_credentials(platform_name: str) -> dict:
     return {
         'enabled': env_config.get('ENABLED', False),
         'access_token': env_config.get('ACCESS_TOKEN', ''),
-        'page_or_account_id': env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('ORGANIZATION_ID', ''),
+        'page_or_account_id': env_config.get('PAGE_ID') or env_config.get('ACCOUNT_ID') or env_config.get('USER_ID') or env_config.get('ORGANIZATION_ID', ''),
         'api_key': env_config.get('API_KEY', ''),
         'api_secret': env_config.get('API_SECRET', ''),
         'access_token_secret': env_config.get('ACCESS_TOKEN_SECRET', ''),
@@ -257,5 +257,115 @@ class LinkedInPoster(BaseSocialPoster):
             if res.status_code in [200, 201] and 'id' in data:
                 return {'success': True, 'post_id': data['id'], 'post_url': ''}
             return {'success': False, 'error': str(data)}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+
+class ThreadsPoster(BaseSocialPoster):
+    def publish(self, post, article_url: str) -> dict:
+        user_id = self.creds.get('page_or_account_id')
+        access_token = self.creds.get('access_token')
+
+        if not user_id or not access_token:
+            return {'success': False, 'error': 'Missing Threads User ID or Access Token'}
+
+        text = f"{post.title}\n\n{post.excerpt or ''}\n\n{article_url}"
+        if len(text) > 500:
+            suffix = f"...\n{article_url}"
+            text = text[:max(0, 500 - len(suffix))].rstrip() + suffix
+
+        payload = {
+            'text': text,
+            'access_token': access_token,
+        }
+        if getattr(post, 'featured_image', None):
+            payload['media_type'] = 'IMAGE'
+            payload['image_url'] = post.featured_image
+        else:
+            payload['media_type'] = 'TEXT'
+
+        try:
+            # Step 1: Create Container
+            container_url = f"https://graph.threads.net/v1.0/{user_id}/threads"
+            res1 = requests.post(container_url, data=payload, timeout=25)
+            d1 = res1.json() if res1.content else {}
+            if res1.status_code != 200 or 'id' not in d1:
+                err = d1.get('error', {}).get('message') if isinstance(d1.get('error'), dict) else str(d1)
+                return {'success': False, 'error': f"Threads container failed: {err}"}
+
+            creation_id = d1['id']
+
+            # Step 2: Publish Container
+            publish_url = f"https://graph.threads.net/v1.0/{user_id}/threads_publish"
+            res2 = requests.post(publish_url, data={
+                'creation_id': creation_id,
+                'access_token': access_token,
+            }, timeout=25)
+            d2 = res2.json() if res2.content else {}
+            if res2.status_code == 200 and 'id' in d2:
+                post_id = str(d2['id'])
+                return {'success': True, 'post_id': post_id, 'post_url': f"https://www.threads.net/post/{post_id}"}
+
+            err = d2.get('error', {}).get('message') if isinstance(d2.get('error'), dict) else str(d2)
+            return {'success': False, 'error': f"Threads publish failed: {err}"}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+
+
+class TikTokPoster(BaseSocialPoster):
+    def publish(self, post, article_url: str) -> dict:
+        access_token = self.creds.get('access_token')
+        account_id = self.creds.get('page_or_account_id')
+        media_url = getattr(post, 'featured_image', None)
+
+        if not access_token:
+            return {'success': False, 'error': 'Missing TikTok Access Token'}
+
+        if not media_url:
+            return {'success': False, 'error': 'TikTok requires a featured image URL to create a post.'}
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json; charset=UTF-8"
+        }
+
+        title = post.title[:150]
+        description = f"{post.title}\n\n{post.excerpt or ''}\n\nRead more: {article_url}"[:2200]
+
+        payload = {
+            "post_info": {
+                "title": title,
+                "description": description,
+                "privacy_level": "PUBLIC_TO_EVERYONE",
+                "disable_duet": False,
+                "disable_comment": False,
+                "disable_stitch": False,
+                "auto_add_music": True
+            },
+            "source_info": {
+                "source": "PULL_FROM_URL",
+                "photo_cover_index": 1,
+                "photo_images": [media_url]
+            },
+            "post_mode": "DIRECT_POST",
+            "media_type": "PHOTO"
+        }
+
+        try:
+            url = "https://open.tiktokapis.com/v2/post/publish/content/init/"
+            res = requests.post(url, json=payload, headers=headers, timeout=30)
+            data = res.json() if res.content else {}
+
+            inner_data = data.get('data') or {}
+            publish_id = inner_data.get('publish_id')
+            err_info = data.get('error') or {}
+            err_code = err_info.get('code') if isinstance(err_info, dict) else None
+
+            if res.status_code in [200, 201] and publish_id and (err_code is None or err_code == 'ok'):
+                post_url = f"https://www.tiktok.com/@{account_id}/video/{publish_id}" if account_id else "https://www.tiktok.com"
+                return {'success': True, 'post_id': str(publish_id), 'post_url': post_url}
+
+            error_msg = err_info.get('message') or err_code or str(data)
+            return {'success': False, 'error': f"TikTok post failed ({res.status_code}): {error_msg}"}
         except Exception as e:
             return {'success': False, 'error': str(e)}

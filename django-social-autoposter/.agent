@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.1.1)
+# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.2.0)
 
-A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, X (Twitter), LinkedIn, and more.
+A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, Threads, TikTok, X (Twitter), LinkedIn, and more.
 
 ---
 
@@ -25,7 +25,7 @@ Authorization: Bearer <jwt_access_token>
   "message": "We have just released our new platform features! Check it out now.",
   "link_url": "https://example.com/announcement",
   "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-  "platforms": ["facebook", "twitter", "linkedin", "instagram"]
+  "platforms": ["facebook", "instagram", "threads", "tiktok", "twitter", "linkedin"]
 }
 ```
 > **Tip:** You can omit the `"platforms"` array or pass `null` to automatically post to all platforms currently enabled in `.env` or the database.

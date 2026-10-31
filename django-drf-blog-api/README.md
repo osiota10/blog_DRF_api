@@ -1,8 +1,8 @@
 # django-drf-blog-api
 
-A production-ready, reusable Django REST Framework blog and magazine API package supporting articles, magazine series editions, categories, tags, author profiles, backdated publications (`pub_date`), nested comments, generic content likes, **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn via `django-environ`), and Cloudinary / MediaAsset integration.
+A production-ready, reusable Django REST Framework blog and magazine API package supporting articles, magazine series editions, categories, tags, author profiles, backdated publications (`pub_date`), nested comments, generic content likes, **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn via `django-environ`), and Cloudinary / MediaAsset integration.
 
-Current Version: **`0.3.1`**
+Current Version: **`0.3.2`**
 
 ---
 
@@ -11,7 +11,7 @@ Current Version: **`0.3.1`**
 * **Blog Article Management**: Rich text content (Django CKEditor 5), backdated publication scheduling (`pub_date`), excerpt, read time calculation, auto-generated unique slug, category, tags, and keywords.
 * **Magazine Series Editions**: Volume/Issue management, cover image (`MediaAsset`), editorial summaries, and lead stories headlines.
 * **Author Profiles**: One-to-one user account linking (`AUTH_USER_MODEL`), custom roles, and author biographies.
-* **🤖 Social Media Auto-Poster**: Automatically formats and posts newly published articles to **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** asynchronously without slowing down HTTP request cycles.
+* **🤖 Social Media Auto-Poster**: Automatically formats and posts newly published articles to **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** asynchronously without slowing down HTTP request cycles.
 * **Environment-Based Security (`django-environ`)**: Store social tokens securely in `.env` with optional Django Admin overrides (`SocialPlatformConfig`).
 * **Audit Logging**: Every social media post attempt is logged with status (`pending`, `published`, `failed`), external post URL, and error message in `SocialPostLog`.
 
@@ -83,6 +83,16 @@ SOCIAL_AUTO_POST = {
         'ORGANIZATION_ID': env.str('LINKEDIN_ORGANIZATION_ID', default=''),
         'ACCESS_TOKEN': env.str('LINKEDIN_ACCESS_TOKEN', default=''),
     },
+    'THREADS': {
+        'ENABLED': env.bool('THREADS_AUTO_POST_ENABLED', default=False),
+        'USER_ID': env.str('THREADS_USER_ID', default=''),
+        'ACCESS_TOKEN': env.str('THREADS_ACCESS_TOKEN', default=''),
+    },
+    'TIKTOK': {
+        'ENABLED': env.bool('TIKTOK_AUTO_POST_ENABLED', default=False),
+        'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
+        'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
+    },
 }
 ```
 
@@ -102,6 +112,16 @@ FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# Threads API (Meta)
+THREADS_AUTO_POST_ENABLED=True
+THREADS_USER_ID=17841400000000000
+THREADS_ACCESS_TOKEN=THQ...
+
+# TikTok Content Posting API (Requires featured image)
+TIKTOK_AUTO_POST_ENABLED=True
+TIKTOK_ACCOUNT_ID=your_tiktok_username
+TIKTOK_ACCESS_TOKEN=act.example...
 
 # X / Twitter v2 API (OAuth 1.0a User Context)
 TWITTER_AUTO_POST_ENABLED=True

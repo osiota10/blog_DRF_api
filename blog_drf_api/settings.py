@@ -322,4 +322,14 @@ SOCIAL_AUTO_POST = {
         'ORGANIZATION_ID': env.str('LINKEDIN_ORGANIZATION_ID', default=''),
         'ACCESS_TOKEN': env.str('LINKEDIN_ACCESS_TOKEN', default=''),
     },
+    'THREADS': {
+        'ENABLED': env.bool('THREADS_AUTO_POST_ENABLED', default=False),
+        'USER_ID': env.str('THREADS_USER_ID', default=''),
+        'ACCESS_TOKEN': env.str('THREADS_ACCESS_TOKEN', default=''),
+    },
+    'TIKTOK': {
+        'ENABLED': env.bool('TIKTOK_AUTO_POST_ENABLED', default=False),
+        'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
+        'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
+    },
 }

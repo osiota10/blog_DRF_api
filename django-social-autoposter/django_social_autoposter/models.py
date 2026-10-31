@@ -9,6 +9,8 @@ class SocialPlatformConfig(models.Model):
         ('instagram', 'Instagram Business'),
         ('twitter', 'X / Twitter'),
         ('linkedin', 'LinkedIn'),
+        ('threads', 'Threads'),
+        ('tiktok', 'TikTok'),
     ]
     platform = models.CharField(max_length=30, choices=PLATFORM_CHOICES, unique=True)
     is_enabled = models.BooleanField(default=True)

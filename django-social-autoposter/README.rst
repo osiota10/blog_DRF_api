@@ -2,9 +2,9 @@
 django-social-autoposter
 ========================
 
-A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **0.1.1**
+Current Version: **0.2.0**
 
 Quick Start
 -----------
@@ -45,17 +45,14 @@ In your Django ``urls.py``:
 
     python manage.py migrate
 
-Twitter / X (API v2) User Context Requirement
-----------------------------------------------
-Twitter's ``POST /2/tweets`` endpoint rejects OAuth 2.0 Application-Only Bearer Tokens with ``403 Forbidden``. To post tweets on behalf of an account, provide **OAuth 1.0a User Context** tokens in ``.env`` or via ``SocialPlatformConfig``:
-
-- ``TWITTER_API_KEY`` (Consumer Key)
-- ``TWITTER_API_SECRET`` (Consumer Secret)
-- ``TWITTER_ACCESS_TOKEN`` (User Access Token)
-- ``TWITTER_ACCESS_TOKEN_SECRET`` (User Access Token Secret)
-
-**Critical Developer Portal Setting:**
-In `Twitter Developer Portal <https://developer.x.com/>`_ under Project & App settings -> **User authentication settings**, set app permissions to **"Read and write"** *before* generating or regenerating the Access Token and Access Token Secret.
+Supported Social Media Platforms
+--------------------------------
+- **Facebook Pages**: Graph API v19.0 page feed sharing.
+- **Instagram Business**: Two-step container creation & publishing (requires image attachment).
+- **Threads (Meta)**: Two-step media container & publish API (supports text-only and images up to 500 characters).
+- **TikTok**: Content Posting API direct post (photo/video via public URL).
+- **X / Twitter**: API v2 ``POST /2/tweets`` via OAuth 1.0a User Context.
+- **LinkedIn**: UGC Post API v2 for company organization or personal profiles.
 
 Python Service Usage
 --------------------
@@ -69,6 +66,6 @@ Python Service Usage
         message="Check out our new release!",
         link_url="https://example.com/product",
         image_url="https://example.com/image.jpg",
-        platforms=['facebook', 'twitter', 'linkedin', 'instagram'],
+        platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
         source_instance=my_instance
     )

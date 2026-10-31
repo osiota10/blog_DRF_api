@@ -7,7 +7,10 @@ from unittest.mock import patch, MagicMock
 
 from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
 from .services import SocialBroadcastService, get_platform_credentials
-from .adapters import FacebookAdapter, InstagramAdapter, TwitterAdapter, LinkedInAdapter
+from .adapters import (
+    FacebookAdapter, InstagramAdapter, TwitterAdapter, LinkedInAdapter,
+    ThreadsAdapter, TikTokAdapter
+)
 
 User = get_user_model()
 
@@ -133,6 +136,78 @@ class SocialAutoPosterModelAndServiceTests(TestCase):
         res_403 = adapter_bearer.publish(fake_broadcast)
         self.assertFalse(res_403['success'])
         self.assertIn("Bearer Token alone (App-Only) is forbidden", res_403['error'])
+
+    @patch('requests.post')
+    def test_threads_adapter_publish(self, mock_post):
+        fake_broadcast = SocialBroadcast.objects.create(
+            title="Threads News",
+            message="Exploring Meta Threads API",
+            link_url="https://example.com/threads",
+            image_url="https://example.com/image.jpg"
+        )
+
+        # 1. Missing credentials
+        adapter_missing = ThreadsAdapter({})
+        res_missing = adapter_missing.publish(fake_broadcast)
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Missing Threads User ID", res_missing['error'])
+
+        # 2. Successful 2-step publish
+        mock_container_res = MagicMock()
+        mock_container_res.status_code = 200
+        mock_container_res.content = b'{"id": "c_threads_123"}'
+        mock_container_res.json.return_value = {"id": "c_threads_123"}
+
+        mock_publish_res = MagicMock()
+        mock_publish_res.status_code = 200
+        mock_publish_res.content = b'{"id": "p_threads_999"}'
+        mock_publish_res.json.return_value = {"id": "p_threads_999"}
+
+        mock_post.side_effect = [mock_container_res, mock_publish_res]
+
+        adapter_valid = ThreadsAdapter({
+            'page_or_account_id': 'threads_user_1',
+            'access_token': 'threads_tok_abc'
+        })
+        res_valid = adapter_valid.publish(fake_broadcast)
+        self.assertTrue(res_valid['success'])
+        self.assertEqual(res_valid['post_id'], 'p_threads_999')
+        self.assertIn('threads.net/post/p_threads_999', res_valid['post_url'])
+
+    @patch('requests.post')
+    def test_tiktok_adapter_publish(self, mock_post):
+        # 1. Missing access token
+        adapter_missing = TikTokAdapter({})
+        broadcast_no_image = SocialBroadcast.objects.create(message="TikTok Text Only")
+        res_missing = adapter_missing.publish(broadcast_no_image)
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Missing TikTok Access Token", res_missing['error'])
+
+        # 2. Missing image URL
+        adapter_valid = TikTokAdapter({'access_token': 'tiktok_token_xyz'})
+        res_no_media = adapter_valid.publish(broadcast_no_image)
+        self.assertFalse(res_no_media['success'])
+        self.assertIn("TikTok Content Posting API requires a media URL", res_no_media['error'])
+
+        # 3. Successful photo direct post
+        broadcast_with_media = SocialBroadcast.objects.create(
+            title="TikTok Photo Post",
+            message="Check out our visual announcement",
+            image_url="https://example.com/banner.jpg"
+        )
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.content = b'{"data": {"publish_id": "v_pub_tiktok_456"}, "error": {"code": "ok"}}'
+        mock_res.json.return_value = {
+            "data": {"publish_id": "v_pub_tiktok_456"},
+            "error": {"code": "ok"}
+        }
+        mock_post.return_value = mock_res
+
+        res_ok = adapter_valid.publish(broadcast_with_media)
+        self.assertTrue(res_ok['success'])
+        self.assertEqual(res_ok['post_id'], 'v_pub_tiktok_456')
+
 
 
 class SocialAutoPosterAPITests(TestCase):

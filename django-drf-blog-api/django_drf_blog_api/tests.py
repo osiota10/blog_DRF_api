@@ -5,6 +5,7 @@ from rest_framework import status
 from unittest.mock import patch
 from .models import MagazineSeries, Post, Category, SocialPlatformConfig, SocialPostLog
 from .signals import dispatch_social_posts
+from .social_posters import ThreadsPoster, TikTokPoster
 
 User = get_user_model()
 
@@ -99,3 +100,44 @@ class SocialAutoPosterTests(TestCase):
         self.assertIsNotNone(log)
         self.assertEqual(log.status, 'published')
         self.assertEqual(log.external_post_id, 'fb_12345')
+
+    @patch('requests.post')
+    def test_threads_and_tiktok_posters(self, mock_post):
+        post = Post.objects.create(
+            title='Threads and TikTok Update',
+            content='Publishing across more channels.',
+            featured_image_url='https://example.com/cover.jpg',
+            category=self.category
+        )
+
+        # Threads poster test
+        threads_poster = ThreadsPoster({
+            'page_or_account_id': 'th_user_1',
+            'access_token': 'th_token_1'
+        })
+        mock_container = patch('requests.post').start()
+        mock_res1 = type('Response', (), {'status_code': 200, 'content': b'{"id": "c1"}', 'json': lambda s: {"id": "c1"}})()
+        mock_res2 = type('Response', (), {'status_code': 200, 'content': b'{"id": "p1"}', 'json': lambda s: {"id": "p1"}})()
+        mock_container.side_effect = [mock_res1, mock_res2]
+
+        res_th = threads_poster.publish(post, 'https://example.com/blog/1')
+        self.assertTrue(res_th['success'])
+        self.assertEqual(res_th['post_id'], 'p1')
+
+        # TikTok poster test
+        tiktok_poster = TikTokPoster({
+            'page_or_account_id': 'tt_user_1',
+            'access_token': 'tt_token_1'
+        })
+        mock_tt_res = type('Response', (), {
+            'status_code': 200,
+            'content': b'{"data": {"publish_id": "tt_pub_1"}, "error": {"code": "ok"}}',
+            'json': lambda s: {"data": {"publish_id": "tt_pub_1"}, "error": {"code": "ok"}}
+        })()
+        mock_container.side_effect = None
+        mock_container.return_value = mock_tt_res
+
+        res_tt = tiktok_poster.publish(post, 'https://example.com/blog/1')
+        self.assertTrue(res_tt['success'])
+        self.assertEqual(res_tt['post_id'], 'tt_pub_1')
+        patch.stopall()

@@ -23,8 +23,8 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-social-autoposter`** | **`0.1.1`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
-| **`django-drf-blog-api`** | **`0.3.1`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
+| **`django-social-autoposter`** | **`0.2.0`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
+| **`django-drf-blog-api`** | **`0.3.2`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
 
@@ -428,7 +428,7 @@ export const ServicesDashboard: React.FC = () => {
 
 ## 7. Social Media Auto-Poster Reference (`django_social_autoposter`)
 
-A standalone package to broadcast content simultaneously to **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn**.
+A standalone package to broadcast content simultaneously to **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn**.
 
 ### ⚙️ Environment Configuration (`.env`)
 ```env
@@ -443,6 +443,16 @@ FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# Threads API (Meta)
+THREADS_AUTO_POST_ENABLED=True
+THREADS_USER_ID=17841400000000000
+THREADS_ACCESS_TOKEN=THQ...
+
+# TikTok Content Posting API (Requires image/video)
+TIKTOK_AUTO_POST_ENABLED=True
+TIKTOK_ACCOUNT_ID=your_tiktok_username
+TIKTOK_ACCESS_TOKEN=act.example...
 
 # X / Twitter API v2 (OAuth 1.0a User Context)
 TWITTER_AUTO_POST_ENABLED=True
@@ -483,7 +493,7 @@ broadcast = SocialBroadcastService.broadcast(
     message="We are proud to introduce our latest product release.",
     link_url="https://example.com/products/1",
     image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
-    platforms=['facebook', 'twitter', 'linkedin', 'instagram'], # or None for all enabled
+    platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'], # or None for all enabled
     source_instance=product_instance  # Optional: attaches audit log via GenericForeignKey
 )
 ```

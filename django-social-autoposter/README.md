@@ -1,14 +1,14 @@
 # django-social-autoposter
 
-A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.1.1`**
+Current Version: **`0.2.0`**
 
 ---
 
 ## 🚀 Key Features
 
-* **One-Call Multi-Platform Broadcast**: Publish content (title, message, link, image) to Facebook, Instagram, Twitter, and LinkedIn at once.
+* **One-Call Multi-Platform Broadcast**: Publish content (title, message, link, image) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn at once.
 * **Decoupled Architecture**: Can be used by any domain package (`django-drf-blog-api`, `django-drf-coy-apis`, `django-mkt-place-api`, or custom apps).
 * **Generic Model Attachment (`GenericForeignKey`)**: Attach social broadcast campaigns and logs to *any* model instance (e.g. `Post`, `Product`, `Event`, or standalone manual broadcasts).
 * **Direct REST API Endpoint**: Allows admin dashboards and frontend applications to compose and broadcast directly (`POST /social/broadcast/`).
@@ -71,6 +71,16 @@ SOCIAL_AUTO_POST = {
         'ORGANIZATION_ID': env.str('LINKEDIN_ORGANIZATION_ID', default=''),
         'ACCESS_TOKEN': env.str('LINKEDIN_ACCESS_TOKEN', default=''),
     },
+    'THREADS': {
+        'ENABLED': env.bool('THREADS_AUTO_POST_ENABLED', default=False),
+        'USER_ID': env.str('THREADS_USER_ID', default=''),
+        'ACCESS_TOKEN': env.str('THREADS_ACCESS_TOKEN', default=''),
+    },
+    'TIKTOK': {
+        'ENABLED': env.bool('TIKTOK_AUTO_POST_ENABLED', default=False),
+        'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
+        'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
+    },
 }
 ```
 
@@ -90,6 +100,16 @@ FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# Threads API (Meta)
+THREADS_AUTO_POST_ENABLED=True
+THREADS_USER_ID=17841400000000000
+THREADS_ACCESS_TOKEN=THQ...
+
+# TikTok Content Posting API (Requires image/video attachment)
+TIKTOK_AUTO_POST_ENABLED=True
+TIKTOK_ACCOUNT_ID=your_tiktok_username
+TIKTOK_ACCESS_TOKEN=act.example...
 
 # Twitter / X API v2 (OAuth 1.0a User Context)
 TWITTER_AUTO_POST_ENABLED=True
@@ -139,7 +159,7 @@ broadcast = SocialBroadcastService.broadcast(
     message="We are thrilled to launch our new smartphone with cutting edge AI capabilities.",
     link_url="https://example.com/products/next-gen",
     image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
-    platforms=['facebook', 'twitter', 'linkedin', 'instagram'], # or None for all enabled
+    platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'], # or None for all enabled
     source_instance=my_product_instance # Optional: attaches audit log to any model instance
 )
 

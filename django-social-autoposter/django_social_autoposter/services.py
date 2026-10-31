@@ -31,6 +31,7 @@ def get_platform_credentials(platform_name: str) -> dict:
                     db_config.page_or_account_id or
                     env_config.get('PAGE_ID') or
                     env_config.get('ACCOUNT_ID') or
+                    env_config.get('USER_ID') or
                     env_config.get('ORGANIZATION_ID', '')
                 ),
                 'api_key': db_config.api_key or env_config.get('API_KEY', ''),
@@ -49,6 +50,7 @@ def get_platform_credentials(platform_name: str) -> dict:
         'page_or_account_id': (
             env_config.get('PAGE_ID') or
             env_config.get('ACCOUNT_ID') or
+            env_config.get('USER_ID') or
             env_config.get('ORGANIZATION_ID', '')
         ),
         'api_key': env_config.get('API_KEY', ''),

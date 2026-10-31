@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: django-drf-blog-api
-Version: 0.3.1
+Version: 0.3.2
 Summary: A Django app blog API endpoints.
 Home-page: https://github.com/osiota10/blog_DRF_api
 Author: Osiota Samuel Obrozie
@@ -35,9 +35,9 @@ Dynamic: license-file
 django-drf-blog-api
 ===================
 
-A reusable Django REST Framework blog and magazine API package with support for articles, magazine series editions, categories, tags, author profiles, backdated publications (``pub_date``), comments, likes, **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn via ``django-environ``), and Cloudinary / MediaAsset integration.
+A reusable Django REST Framework blog and magazine API package with support for articles, magazine series editions, categories, tags, author profiles, backdated publications (``pub_date``), comments, likes, **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn via ``django-environ``), and Cloudinary / MediaAsset integration.
 
-Current Version: **0.3.1**
+Current Version: **0.3.2**
 
 Quick Start
 -----------
@@ -84,6 +84,16 @@ In your Django ``settings.py``:
             'ACCOUNT_ID': env.str('INSTAGRAM_ACCOUNT_ID', default=''),
             'ACCESS_TOKEN': env.str('INSTAGRAM_ACCESS_TOKEN', default=''),
         },
+        'THREADS': {
+            'ENABLED': env.bool('THREADS_AUTO_POST_ENABLED', default=False),
+            'USER_ID': env.str('THREADS_USER_ID', default=''),
+            'ACCESS_TOKEN': env.str('THREADS_ACCESS_TOKEN', default=''),
+        },
+        'TIKTOK': {
+            'ENABLED': env.bool('TIKTOK_AUTO_POST_ENABLED', default=False),
+            'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
+            'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
+        },
         'TWITTER': {
             'ENABLED': env.bool('TWITTER_AUTO_POST_ENABLED', default=False),
             'API_KEY': env.str('TWITTER_API_KEY', default=''),
@@ -98,17 +108,14 @@ In your Django ``settings.py``:
         },
     }
 
-Twitter / X (API v2) User Context Requirement
-----------------------------------------------
-Twitter's ``POST /2/tweets`` endpoint rejects OAuth 2.0 Application-Only Bearer Tokens with ``403 Forbidden``. To post tweets on behalf of an account, provide **OAuth 1.0a User Context** tokens in ``.env`` or via ``SocialPlatformConfig``:
-
-- ``TWITTER_API_KEY`` (Consumer Key)
-- ``TWITTER_API_SECRET`` (Consumer Secret)
-- ``TWITTER_ACCESS_TOKEN`` (User Access Token)
-- ``TWITTER_ACCESS_TOKEN_SECRET`` (User Access Token Secret)
-
-**Critical Developer Portal Setting:**
-In `Twitter Developer Portal <https://developer.x.com/>`_ under Project & App settings -> **User authentication settings**, set app permissions to **"Read and write"** *before* generating or regenerating the Access Token and Access Token Secret.
+Supported Social Media Platforms
+--------------------------------
+- **Facebook Pages**: Graph API v19.0 page feed sharing.
+- **Instagram Business**: Two-step container creation & publishing (requires image).
+- **Threads (Meta)**: Two-step media container & publish API.
+- **TikTok**: Content Posting API direct post (requires image or video).
+- **X / Twitter**: API v2 ``POST /2/tweets`` via OAuth 1.0a User Context.
+- **LinkedIn**: UGC Post API v2.
 
 4. Add URL Patterns
 ~~~~~~~~~~~~~~~~~~~

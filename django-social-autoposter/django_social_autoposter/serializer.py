@@ -99,5 +99,5 @@ class SocialBroadcastCreateSerializer(serializers.Serializer):
         child=serializers.CharField(),
         required=False,
         default=None,
-        help_text="Optional list of platforms: ['facebook', 'instagram', 'twitter', 'linkedin']. If omitted, posts to all enabled."
+        help_text="Optional list of platforms: ['facebook', 'instagram', 'twitter', 'linkedin', 'threads', 'tiktok']. If omitted, posts to all enabled."
     )

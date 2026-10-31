@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.1) & `django-social-autoposter` (v0.1.1)
+# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.2) & `django-social-autoposter` (v0.2.0)
 
-Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting** (Facebook, Instagram, X/Twitter, LinkedIn).
+Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn).
 
 ---
 
@@ -72,7 +72,7 @@ Authorization: Bearer <your_jwt_access_token>
 
 ## 📢 Standalone Social Media Auto-Poster (`django_social_autoposter`)
 
-A decoupled package for broadcasting posts simultaneously to Facebook, Instagram, X (Twitter), and LinkedIn.
+A decoupled package for broadcasting posts simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn.
 
 ### 1. Direct Compose & Broadcast Endpoint
 * **Endpoint:** `POST /social/broadcast/`
@@ -83,7 +83,7 @@ A decoupled package for broadcasting posts simultaneously to Facebook, Instagram
   "message": "We have just released our new platform features! Check it out now.",
   "link_url": "https://example.com/announcement",
   "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
-  "platforms": ["facebook", "twitter", "linkedin", "instagram"]
+  "platforms": ["facebook", "instagram", "threads", "tiktok", "twitter", "linkedin"]
 }
 ```
 *(Leave `platforms` null/empty to broadcast to all enabled platforms).*
@@ -91,7 +91,7 @@ A decoupled package for broadcasting posts simultaneously to Facebook, Instagram
 ### 2. Broadcast History & Per-Platform Audit Logs
 * **List Broadcasts:** `GET /social/broadcast/`
 * **Broadcast Detail:** `GET /social/broadcast/{id}/`
-* **Filter Execution Logs:** `GET /social/logs/?platform=facebook&status=published`
+* **Filter Execution Logs:** `GET /social/logs/?platform=threads&status=published`
 
 ### 3. Python Service Usage in Any Django App
 ```python
@@ -102,7 +102,7 @@ broadcast = SocialBroadcastService.broadcast(
     message="We are proud to introduce our latest updates.",
     link_url="https://example.com/products/item",
     image_url="https://example.com/image.png",
-    platforms=['facebook', 'twitter', 'linkedin', 'instagram'],
+    platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
     source_instance=product_instance  # Generic relation
 )
 ```
@@ -121,6 +121,14 @@ FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+THREADS_AUTO_POST_ENABLED=True
+THREADS_USER_ID=17841400000000000
+THREADS_ACCESS_TOKEN=THQ...
+
+TIKTOK_AUTO_POST_ENABLED=True
+TIKTOK_ACCOUNT_ID=your_tiktok_username
+TIKTOK_ACCESS_TOKEN=act.example...
 
 TWITTER_AUTO_POST_ENABLED=True
 TWITTER_API_KEY=your_consumer_key

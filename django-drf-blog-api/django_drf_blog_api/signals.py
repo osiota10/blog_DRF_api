@@ -4,7 +4,8 @@ from django.conf import settings
 from .utils import unique_slug_generator
 from .models import Post, MagazineSeries, SocialPostLog
 from .social_posters import (
-    get_platform_credentials, FacebookPoster, InstagramPoster, XPoster, LinkedInPoster
+    get_platform_credentials, FacebookPoster, InstagramPoster, XPoster, LinkedInPoster,
+    ThreadsPoster, TikTokPoster
 )
 
 POSTER_MAP = {
@@ -12,6 +13,8 @@ POSTER_MAP = {
     'instagram': InstagramPoster,
     'twitter': XPoster,
     'linkedin': LinkedInPoster,
+    'threads': ThreadsPoster,
+    'tiktok': TikTokPoster,
 }
 
 
