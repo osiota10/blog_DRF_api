@@ -2,9 +2,9 @@
 django-social-autoposter
 ========================
 
-A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts and sending direct private messages across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **0.2.0**
+Current Version: **0.3.0**
 
 Quick Start
 -----------
@@ -47,20 +47,22 @@ In your Django ``urls.py``:
 
 Supported Social Media Platforms
 --------------------------------
-- **Facebook Pages**: Graph API v19.0 page feed sharing.
-- **Instagram Business**: Two-step container creation & publishing (requires image attachment).
+- **Facebook Pages & Messenger**: Graph API v19.0 feed posting and direct customer messaging.
+- **Instagram Business & Direct**: Two-step container publishing and Instagram Direct messaging.
+- **WhatsApp Business Cloud API**: Meta Graph API direct messaging with support for text, documents, images, audio, video, and templates.
 - **Threads (Meta)**: Two-step media container & publish API (supports text-only and images up to 500 characters).
 - **TikTok**: Content Posting API direct post (photo/video via public URL).
-- **X / Twitter**: API v2 ``POST /2/tweets`` via OAuth 1.0a User Context.
-- **LinkedIn**: UGC Post API v2 for company organization or personal profiles.
+- **X / Twitter**: API v2 ``POST /2/tweets`` and Direct Messaging via OAuth 1.0a / OAuth 2.0 User Context.
+- **LinkedIn**: UGC Post API v2 and Member Messaging API v2.
 
 Python Service Usage
 --------------------
 
 .. code-block:: python
 
-    from django_social_autoposter.services import SocialBroadcastService
+    from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
+    # 1. Multi-Platform Broadcast
     broadcast = SocialBroadcastService.broadcast(
         title="Product Launch",
         message="Check out our new release!",
@@ -68,4 +70,13 @@ Python Service Usage
         image_url="https://example.com/image.jpg",
         platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
         source_instance=my_instance
+    )
+
+    # 2. Social Direct Messaging
+    dm = SocialMessagingService.send_message(
+        platform='whatsapp',
+        recipient_id='+1234567890',
+        message='Your order has been verified and processed.',
+        media_url='https://example.com/receipt.pdf',
+        extra_params={'media_type': 'document'}
     )

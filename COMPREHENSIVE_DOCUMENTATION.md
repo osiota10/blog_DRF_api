@@ -23,7 +23,7 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-social-autoposter`** | **`0.2.0`** | Standalone Multi-Platform Social Auto-Poster | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, generic model linking, async dispatch, audit logging. |
+| **`django-social-autoposter`** | **`0.3.0`** | Standalone Multi-Platform Social Auto-Poster & Direct Messaging | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, and send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn. |
 | **`django-drf-blog-api`** | **`0.3.2`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
@@ -426,23 +426,28 @@ export const ServicesDashboard: React.FC = () => {
 
 ---
 
-## 7. Social Media Auto-Poster Reference (`django_social_autoposter`)
+## 7. Social Media Auto-Poster & Messaging Reference (`django_social_autoposter`)
 
-A standalone package to broadcast content simultaneously to **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn**.
+A standalone package to broadcast content simultaneously to **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn**, and send direct private messages via **WhatsApp Business Cloud API**, **Facebook Messenger**, **Instagram Direct**, **X / Twitter DMs**, and **LinkedIn Messaging**.
 
 ### ⚙️ Environment Configuration (`.env`)
 ```env
 FRONTEND_SITE_URL=https://yourdomain.com
 
-# Facebook Page
+# Facebook Page & Messenger
 FACEBOOK_AUTO_POST_ENABLED=True
 FACEBOOK_PAGE_ID=109876543210
 FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 
-# Instagram Business (Requires featured image)
+# Instagram Business & Direct (Requires featured image for broadcast)
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# WhatsApp Business Cloud API
+WHATSAPP_AUTO_POST_ENABLED=True
+WHATSAPP_PHONE_NUMBER_ID=109876543210987
+WHATSAPP_ACCESS_TOKEN=EAAG...
 
 # Threads API (Meta)
 THREADS_AUTO_POST_ENABLED=True
@@ -482,12 +487,15 @@ LINKEDIN_ACCESS_TOKEN=AQX...
 | `/social/broadcast/<id>/` | `GET` | Detail of a specific broadcast with live external post URLs. |
 | `/social/logs/` | `GET` | Filter logs by `?platform=facebook&status=published`. |
 | `/social/configs/` | `GET`, `POST` | Manage DB platform credentials overrides. |
+| `/social/messages/send/` | `POST` | Send direct message on WhatsApp, Instagram, Messenger, X, or LinkedIn. |
+| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=delivered`). |
+| `/social/messages/<id>/` | `GET`, `DELETE` | View details or delete direct message record. |
 
 ### 🐍 Python Service Usage in Any Django App
 ```python
-from django_social_autoposter.services import SocialBroadcastService
+from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
-# Single-line broadcast to Facebook, Instagram, Twitter, and LinkedIn:
+# 1. Multi-Platform Broadcast:
 broadcast = SocialBroadcastService.broadcast(
     title="Product Announcement",
     message="We are proud to introduce our latest product release.",
@@ -495,6 +503,15 @@ broadcast = SocialBroadcastService.broadcast(
     image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
     platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'], # or None for all enabled
     source_instance=product_instance  # Optional: attaches audit log via GenericForeignKey
+)
+
+# 2. Social Direct Messaging:
+dm = SocialMessagingService.send_message(
+    platform='whatsapp',
+    recipient_id='+1234567890',
+    message='Your order has been verified and processed.',
+    media_url='https://example.com/receipt.pdf',
+    extra_params={'media_type': 'document'}
 )
 ```
 

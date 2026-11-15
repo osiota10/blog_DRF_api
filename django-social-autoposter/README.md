@@ -1,22 +1,30 @@
 # django-social-autoposter
 
-A standalone, modular Django REST Framework package for broadcasting social media posts simultaneously across **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts and sending direct private messages across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.2.0`**
+Current Version: **`0.3.0`**
 
 ---
 
 ## 🚀 Key Features
 
-* **One-Call Multi-Platform Broadcast**: Publish content (title, message, link, image) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn at once.
+* **Multi-Platform Broadcasting**: Publish content (title, message, link, image) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn simultaneously.
+* **Direct Messaging (DMs)**: Send direct messages to customers/users across:
+  * **WhatsApp Business Cloud API** (text, images, documents, audio, video, templates)
+  * **Facebook Messenger** (text, media attachments, Meta message tags)
+  * **Instagram Direct Messages** (text, media attachments)
+  * **Twitter / X Direct Messages** (API v2 DMs with OAuth 1.0a or OAuth 2.0 User Context)
+  * **LinkedIn Messaging** (API v2 messages with recipient member URNs)
 * **Decoupled Architecture**: Can be used by any domain package (`django-drf-blog-api`, `django-drf-coy-apis`, `django-mkt-place-api`, or custom apps).
 * **Generic Model Attachment (`GenericForeignKey`)**: Attach social broadcast campaigns and logs to *any* model instance (e.g. `Post`, `Product`, `Event`, or standalone manual broadcasts).
-* **Direct REST API Endpoint**: Allows admin dashboards and frontend applications to compose and broadcast directly (`POST /social/broadcast/`).
-* **Non-Blocking Asynchronous Execution**: Dispatches HTTP network calls in background worker thread pools without slowing down web request-response times.
+* **Direct REST API Endpoints**: Full API for both broadcasting (`POST /social/broadcast/`) and direct messaging (`POST /social/messages/send/`).
+* **Non-Blocking Asynchronous Execution**: Dispatches broadcast HTTP network calls in background worker thread pools without slowing down web request-response times.
 * **Hybrid Credential Resolution**:
   * Prioritizes database overrides (`SocialPlatformConfig`).
   * Falls back to `.env` configuration via `django-environ` / `settings.py`.
-* **Execution Auditing**: Detailed per-platform logs (`SocialPostLog`) recording live post URLs, platform post IDs, and error traces.
+* **Execution Auditing & Delivery Tracking**:
+  * `SocialPostLog`: Detailed broadcast logs recording live post URLs, platform post IDs, and error traces.
+  * `SocialDirectMessage`: Audit log tracking message status (`pending`, `delivered`, `failed`), external message IDs, and conversation IDs.
 
 ---
 
@@ -81,6 +89,11 @@ SOCIAL_AUTO_POST = {
         'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
         'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
     },
+    'WHATSAPP': {
+        'ENABLED': env.bool('WHATSAPP_AUTO_POST_ENABLED', default=False),
+        'PHONE_NUMBER_ID': env.str('WHATSAPP_PHONE_NUMBER_ID', default=''),
+        'ACCESS_TOKEN': env.str('WHATSAPP_ACCESS_TOKEN', default=''),
+    },
 }
 ```
 
@@ -91,15 +104,20 @@ Create or update `.env` in your project root:
 # Frontend Base URL
 FRONTEND_SITE_URL=https://yourdomain.com
 
-# Facebook Page API
+# Facebook Page API & Messenger
 FACEBOOK_AUTO_POST_ENABLED=True
 FACEBOOK_PAGE_ID=109876543210
 FACEBOOK_PAGE_ACCESS_TOKEN=EAAG...
 
-# Instagram Business API (Requires image on broadcast)
+# Instagram Business API & Direct
 INSTAGRAM_AUTO_POST_ENABLED=True
 INSTAGRAM_ACCOUNT_ID=17841400000000000
 INSTAGRAM_ACCESS_TOKEN=EAAG...
+
+# WhatsApp Business Cloud API
+WHATSAPP_AUTO_POST_ENABLED=True
+WHATSAPP_PHONE_NUMBER_ID=109876543210987
+WHATSAPP_ACCESS_TOKEN=EAAG...
 
 # Threads API (Meta)
 THREADS_AUTO_POST_ENABLED=True
@@ -150,6 +168,7 @@ python manage.py migrate
 
 ## 🐍 Python Service Usage (From Any Package / App)
 
+### 1. Multi-Platform Broadcast
 ```python
 from django_social_autoposter.services import SocialBroadcastService
 
@@ -166,6 +185,43 @@ broadcast = SocialBroadcastService.broadcast(
 print("Broadcast ID:", broadcast.id)
 ```
 
+### 2. Social Direct Messaging
+```python
+from django_social_autoposter.services import SocialMessagingService
+
+# Send a WhatsApp message (E.164 phone number)
+dm_wa = SocialMessagingService.send_message(
+    platform='whatsapp',
+    recipient_id='+1234567890',
+    message='Your order #4892 has been shipped and is on its way!',
+    media_url='https://example.com/tracking_label.pdf',
+    extra_params={'media_type': 'document', 'filename': 'tracking.pdf'}
+)
+print("WhatsApp Status:", dm_wa.status, "External ID:", dm_wa.external_message_id)
+
+# Send an Instagram Direct Message
+dm_ig = SocialMessagingService.send_message(
+    platform='instagram',
+    recipient_id='178414000123456',  # Instagram Scoped User ID
+    message='Thanks for reaching out! How can our support team assist you today?'
+)
+
+# Send an X / Twitter Direct Message
+dm_tw = SocialMessagingService.send_message(
+    platform='twitter',
+    recipient_id='1850000000000000000',  # X User ID
+    message='Here is your requested support ticket update.'
+)
+
+# Send a Facebook Messenger Message (with optional Message Tag)
+dm_fb = SocialMessagingService.send_message(
+    platform='facebook',
+    recipient_id='1029384756',  # Page-scoped User ID
+    message='Your account details were successfully updated.',
+    extra_params={'tag': 'ACCOUNT_UPDATE'}
+)
+```
+
 ---
 
 ## 📡 REST API Sitemap
@@ -178,6 +234,35 @@ print("Broadcast ID:", broadcast.id)
 | `/social/configs/` | `GET`, `POST` | List or create database-backed platform credential overrides. |
 | `/social/configs/<id>/` | `GET`, `PUT`, `DELETE` | Edit or delete platform credentials. |
 | `/social/logs/` | `GET` | Search and filter post execution logs (`?platform=facebook&status=published`). |
+| `/social/messages/send/` | `POST` | Send a direct message to a user on WhatsApp, Instagram, FB Messenger, X, or LinkedIn. |
+| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=delivered`). |
+| `/social/messages/<id>/` | `GET`, `DELETE` | Retrieve delivery details or delete a direct message log. |
+
+---
+
+## 💻 Direct Messaging API Example (Axios / JavaScript)
+
+```javascript
+import axios from 'axios';
+
+// 1. Send Direct Message via WhatsApp
+async function sendWhatsAppAlert(userToken, recipientPhone, alertMessage) {
+  const payload = {
+    platform: "whatsapp",
+    recipient_id: recipientPhone, // e.g. "+15552345678"
+    message: alertMessage,
+    media_url: "https://example.com/receipt.pdf", // Optional
+    extra_params: { media_type: "document" }
+  };
+
+  const response = await axios.post('/social/messages/send/', payload, {
+    headers: { Authorization: `Token ${userToken}` }
+  });
+
+  console.log("DM Status:", response.data.status); // "delivered" | "failed"
+  console.log("External Message ID:", response.data.external_message_id);
+}
+```
 
 ---
 

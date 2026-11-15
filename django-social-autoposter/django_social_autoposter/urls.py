@@ -5,6 +5,9 @@ from .views import (
     SocialPlatformConfigView,
     SocialPlatformConfigDetailView,
     SocialPostLogListView,
+    SocialMessageSendAPIView,
+    SocialMessageListView,
+    SocialMessageDetailView,
 )
 
 app_name = "django_social_autoposter"
@@ -25,4 +28,12 @@ urlpatterns = [
     # Audit Logs
     path('logs', SocialPostLogListView.as_view(), name='log-list'),
     path('logs/', SocialPostLogListView.as_view(), name='log-list-slash'),
+
+    # Direct Messaging Endpoints
+    path('messages/send', SocialMessageSendAPIView.as_view(), name='message-send'),
+    path('messages/send/', SocialMessageSendAPIView.as_view(), name='message-send-slash'),
+    path('messages', SocialMessageListView.as_view(), name='message-list'),
+    path('messages/', SocialMessageListView.as_view(), name='message-list-slash'),
+    path('messages/<int:pk>', SocialMessageDetailView.as_view(), name='message-detail'),
+    path('messages/<int:pk>/', SocialMessageDetailView.as_view(), name='message-detail-slash'),
 ]

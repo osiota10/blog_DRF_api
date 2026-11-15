@@ -332,4 +332,9 @@ SOCIAL_AUTO_POST = {
         'ACCOUNT_ID': env.str('TIKTOK_ACCOUNT_ID', default=''),
         'ACCESS_TOKEN': env.str('TIKTOK_ACCESS_TOKEN', default=''),
     },
+    'WHATSAPP': {
+        'ENABLED': env.bool('WHATSAPP_AUTO_POST_ENABLED', default=False),
+        'PHONE_NUMBER_ID': env.str('WHATSAPP_PHONE_NUMBER_ID', default=''),
+        'ACCESS_TOKEN': env.str('WHATSAPP_ACCESS_TOKEN', default=''),
+    },
 }

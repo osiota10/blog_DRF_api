@@ -11,6 +11,7 @@ class SocialPlatformConfig(models.Model):
         ('linkedin', 'LinkedIn'),
         ('threads', 'Threads'),
         ('tiktok', 'TikTok'),
+        ('whatsapp', 'WhatsApp Business'),
     ]
     platform = models.CharField(max_length=30, choices=PLATFORM_CHOICES, unique=True)
     is_enabled = models.BooleanField(default=True)
@@ -91,3 +92,38 @@ class SocialPostLog(models.Model):
         ordering = ['-created_at']
         verbose_name = "Social Post Log"
         verbose_name_plural = "Social Post Logs"
+
+
+class SocialDirectMessage(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('delivered', 'Delivered'),
+        ('failed', 'Failed'),
+    ]
+    DIRECTION_CHOICES = [
+        ('outbound', 'Outbound (Sent)'),
+        ('inbound', 'Inbound (Received)'),
+    ]
+    platform = models.CharField(max_length=30, choices=SocialPlatformConfig.PLATFORM_CHOICES)
+    recipient_id = models.CharField(max_length=255, help_text="Platform user ID, phone number, or chat handle")
+    sender_id = models.CharField(max_length=255, blank=True, null=True, help_text="Sender ID or Page/Account ID")
+    message = models.TextField(help_text="Message text content")
+    media_url = models.URLField(max_length=500, blank=True, null=True, help_text="Optional media attachment URL")
+    direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='outbound')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    external_message_id = models.CharField(max_length=255, blank=True, null=True, help_text="Message ID returned by platform")
+    conversation_id = models.CharField(max_length=255, blank=True, null=True, help_text="Conversation or Thread ID")
+    error_message = models.TextField(blank=True, null=True)
+    response_data = models.JSONField(default=dict, blank=True)
+    extra_data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"[{self.platform.upper()}] DM to {self.recipient_id} ({self.status})"
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Social Direct Message"
+        verbose_name_plural = "Social Direct Messages"
+

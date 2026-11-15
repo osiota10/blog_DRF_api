@@ -5,6 +5,7 @@ from .twitter import TwitterAdapter
 from .linkedin import LinkedInAdapter
 from .threads import ThreadsAdapter
 from .tiktok import TikTokAdapter
+from .whatsapp import WhatsAppAdapter
 
 ADAPTERS_MAP = {
     'facebook': FacebookAdapter,
@@ -13,6 +14,7 @@ ADAPTERS_MAP = {
     'linkedin': LinkedInAdapter,
     'threads': ThreadsAdapter,
     'tiktok': TikTokAdapter,
+    'whatsapp': WhatsAppAdapter,
 }
 
 __all__ = [
@@ -23,5 +25,6 @@ __all__ = [
     'LinkedInAdapter',
     'ThreadsAdapter',
     'TikTokAdapter',
+    'WhatsAppAdapter',
     'ADAPTERS_MAP',
 ]

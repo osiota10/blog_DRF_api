@@ -2,7 +2,7 @@ import logging
 import concurrent.futures
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
-from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
+from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
 from .adapters import ADAPTERS_MAP
 
 logger = logging.getLogger(__name__)
@@ -32,6 +32,7 @@ def get_platform_credentials(platform_name: str) -> dict:
                     env_config.get('PAGE_ID') or
                     env_config.get('ACCOUNT_ID') or
                     env_config.get('USER_ID') or
+                    env_config.get('PHONE_NUMBER_ID') or
                     env_config.get('ORGANIZATION_ID', '')
                 ),
                 'api_key': db_config.api_key or env_config.get('API_KEY', ''),
@@ -51,6 +52,7 @@ def get_platform_credentials(platform_name: str) -> dict:
             env_config.get('PAGE_ID') or
             env_config.get('ACCOUNT_ID') or
             env_config.get('USER_ID') or
+            env_config.get('PHONE_NUMBER_ID') or
             env_config.get('ORGANIZATION_ID', '')
         ),
         'api_key': env_config.get('API_KEY', ''),
@@ -185,3 +187,86 @@ class SocialBroadcastService:
                 _execute_publish(b_id, plat, l_id)
 
         return broadcast
+
+
+class SocialMessagingService:
+    """
+    Unified entry point for sending direct/private messages across Facebook Messenger,
+    Instagram Direct, Twitter / X DMs, WhatsApp Business Cloud API, and LinkedIn Messaging.
+    """
+
+    @classmethod
+    def send_message(
+        cls,
+        platform: str,
+        recipient_id: str,
+        message: str,
+        media_url: str = None,
+        extra_params: dict = None,
+        sender_id: str = None,
+    ) -> SocialDirectMessage:
+        """
+        Sends a direct message and persists audit record in SocialDirectMessage.
+
+        :param platform: Target platform slug ('facebook', 'instagram', 'twitter', 'whatsapp', 'linkedin').
+        :param recipient_id: Platform user ID, phone number, or chat handle.
+        :param message: Message text body.
+        :param media_url: Optional media attachment URL.
+        :param extra_params: Optional dict with tags, template names, or attachment types.
+        :param sender_id: Optional sender ID or account ID.
+        :return: SocialDirectMessage instance with delivery status and external message ID.
+        """
+        plat = platform.lower()
+        if not recipient_id:
+            raise ValueError("Recipient ID is required to send a social direct message.")
+        if not message and not media_url:
+            raise ValueError("Message body or media URL is required to send a social direct message.")
+
+        # Create pending record
+        dm = SocialDirectMessage.objects.create(
+            platform=plat,
+            recipient_id=str(recipient_id),
+            sender_id=str(sender_id) if sender_id else None,
+            message=message or '',
+            media_url=media_url,
+            direction='outbound',
+            status='pending',
+            extra_data=extra_params or {}
+        )
+
+        adapter_cls = ADAPTERS_MAP.get(plat)
+        if not adapter_cls:
+            dm.status = 'failed'
+            dm.error_message = f"Unsupported platform for direct messaging: {platform}"
+            dm.save()
+            return dm
+
+        creds = get_platform_credentials(plat)
+        if not creds.get('enabled'):
+            dm.status = 'failed'
+            dm.error_message = f"Platform '{platform}' is disabled in configuration / .env."
+            dm.save()
+            return dm
+
+        adapter = adapter_cls(creds)
+        res = adapter.send_direct_message(
+            recipient_id=str(recipient_id),
+            text=message or '',
+            media_url=media_url,
+            extra_params=extra_params or {}
+        )
+
+        if res.get('success'):
+            dm.status = 'delivered'
+            dm.external_message_id = res.get('message_id')
+            dm.conversation_id = res.get('conversation_id')
+            dm.response_data = res.get('raw_response') or {}
+            dm.error_message = None
+        else:
+            dm.status = 'failed'
+            dm.error_message = res.get('error')
+            dm.response_data = res.get('raw_response') or {}
+
+        dm.save()
+        return dm
+

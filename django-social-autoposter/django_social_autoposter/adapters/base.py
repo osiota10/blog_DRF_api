@@ -28,6 +28,26 @@ class BaseSocialAdapter(ABC):
         """
         pass
 
+    def send_direct_message(self, recipient_id: str, text: str, media_url: str = None, extra_params: dict = None) -> dict:
+        """
+        Sends a private / direct message to a user on the target platform.
+        Returns a dictionary matching:
+        {
+            'success': bool,
+            'message_id': str or None,
+            'conversation_id': str or None,
+            'error': str or None,
+            'raw_response': dict or None,
+        }
+        """
+        return {
+            'success': False,
+            'message_id': None,
+            'conversation_id': None,
+            'error': f"Direct messaging is not supported for platform: {self.platform_name}",
+            'raw_response': None
+        }
+
     def build_text_message(self, broadcast, max_length=None) -> str:
         """
         Builds standard text message combining title, body, and link.

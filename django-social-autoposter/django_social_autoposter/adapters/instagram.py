@@ -96,3 +96,69 @@ class InstagramAdapter(BaseSocialAdapter):
                 'error': str(e),
                 'raw_response': None
             }
+
+    def send_direct_message(self, recipient_id: str, text: str, media_url: str = None, extra_params: dict = None) -> dict:
+        access_token = self.creds.get('access_token')
+        if not access_token:
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': 'Missing Instagram Access Token in configuration / .env',
+                'raw_response': None
+            }
+
+        url = "https://graph.facebook.com/v19.0/me/messages"
+        params = extra_params or {}
+
+        payload = {
+            'recipient': {'id': str(recipient_id)},
+            'access_token': access_token,
+        }
+
+        if media_url:
+            payload['message'] = {
+                'attachment': {
+                    'type': params.get('attachment_type', 'image'),
+                    'payload': {'url': media_url}
+                }
+            }
+        else:
+            payload['message'] = {'text': text}
+
+        try:
+            res = requests.post(url, json=payload, timeout=20)
+            data = res.json() if res.content else {}
+
+            if res.status_code == 200 and 'message_id' in data:
+                return {
+                    'success': True,
+                    'message_id': str(data['message_id']),
+                    'conversation_id': None,
+                    'error': None,
+                    'raw_response': data
+                }
+
+            err_dict = data.get('error', {}) if isinstance(data.get('error'), dict) else {}
+            error_msg = err_dict.get('message') or str(data)
+            error_subcode = err_dict.get('error_subcode')
+            if error_subcode in [2018001, 2018028] or 'window' in error_msg.lower():
+                error_msg += " (Note: Outside 24-hour standard messaging window. Instagram users must initiate conversation or use human agent / approved messaging tags)."
+
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': f"Instagram Direct Error ({res.status_code}): {error_msg}",
+                'raw_response': data
+            }
+        except Exception as e:
+            logger.exception("Error sending Instagram direct message")
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': str(e),
+                'raw_response': None
+            }
+

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
+from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
 
 
 class SocialPlatformConfigSerializer(serializers.ModelSerializer):
@@ -101,3 +101,79 @@ class SocialBroadcastCreateSerializer(serializers.Serializer):
         default=None,
         help_text="Optional list of platforms: ['facebook', 'instagram', 'twitter', 'linkedin', 'threads', 'tiktok']. If omitted, posts to all enabled."
     )
+
+
+class SocialDirectMessageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SocialDirectMessage
+        fields = (
+            'id',
+            'platform',
+            'recipient_id',
+            'sender_id',
+            'message',
+            'media_url',
+            'direction',
+            'status',
+            'external_message_id',
+            'conversation_id',
+            'error_message',
+            'response_data',
+            'extra_data',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = (
+            'id',
+            'direction',
+            'status',
+            'external_message_id',
+            'conversation_id',
+            'error_message',
+            'response_data',
+            'created_at',
+            'updated_at',
+        )
+
+
+class SendMessageRequestSerializer(serializers.Serializer):
+    platform = serializers.ChoiceField(
+        choices=SocialPlatformConfig.PLATFORM_CHOICES,
+        help_text="Target platform: 'facebook', 'instagram', 'twitter', 'whatsapp', 'linkedin'."
+    )
+    recipient_id = serializers.CharField(
+        max_length=255,
+        required=True,
+        help_text="Recipient ID (Page Scoped ID, IG User ID, Twitter User ID, Phone Number in E.164, or LinkedIn URN/vanity)."
+    )
+    message = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
+        help_text="Direct message text content."
+    )
+    media_url = serializers.URLField(
+        required=False,
+        allow_blank=True,
+        default=None,
+        help_text="Optional URL to media file (image, video, document, audio)."
+    )
+    sender_id = serializers.CharField(
+        max_length=255,
+        required=False,
+        allow_blank=True,
+        default=None,
+        help_text="Optional custom sender ID or account ID."
+    )
+    extra_params = serializers.DictField(
+        required=False,
+        default=dict,
+        help_text="Optional platform-specific parameters (e.g. tag, template_name, quick_replies, media_type)."
+    )
+
+    def validate(self, attrs):
+        message = attrs.get('message') or ''
+        media_url = attrs.get('media_url')
+        if not message.strip() and not media_url:
+            raise serializers.ValidationError("Either 'message' or 'media_url' must be provided.")
+        return attrs

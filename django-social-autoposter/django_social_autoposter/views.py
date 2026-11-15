@@ -2,14 +2,16 @@ from rest_framework.views import APIView
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
+from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
 from .serializer import (
     SocialPlatformConfigSerializer,
     SocialPostLogSerializer,
     SocialBroadcastSerializer,
     SocialBroadcastCreateSerializer,
+    SocialDirectMessageSerializer,
+    SendMessageRequestSerializer,
 )
-from .services import SocialBroadcastService
+from .services import SocialBroadcastService, SocialMessagingService
 
 
 class SocialBroadcastView(APIView):
@@ -109,3 +111,69 @@ class SocialPostLogListView(generics.ListAPIView):
             qs = qs.filter(broadcast_id=broadcast_id)
 
         return qs
+
+
+class SocialMessageSendAPIView(APIView):
+    """
+    POST: Send a private direct message to a recipient on Facebook Messenger,
+    Instagram Direct, Twitter / X, WhatsApp Business, or LinkedIn.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SendMessageRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        dm = SocialMessagingService.send_message(
+            platform=data['platform'],
+            recipient_id=data['recipient_id'],
+            message=data.get('message', ''),
+            media_url=data.get('media_url'),
+            extra_params=data.get('extra_params') or {},
+            sender_id=data.get('sender_id'),
+        )
+
+        status_code = status.HTTP_201_CREATED if dm.status == 'delivered' else status.HTTP_200_OK
+        return Response(SocialDirectMessageSerializer(dm).data, status=status_code)
+
+
+class SocialMessageListView(generics.ListAPIView):
+    """
+    GET: List logged direct messages with optional filters:
+    ?platform=whatsapp
+    ?recipient_id=+1234567890
+    ?status=delivered
+    ?direction=outbound
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = SocialDirectMessageSerializer
+
+    def get_queryset(self):
+        qs = SocialDirectMessage.objects.all().order_by('-created_at')
+        platform = self.request.query_params.get('platform')
+        recipient_id = self.request.query_params.get('recipient_id')
+        msg_status = self.request.query_params.get('status')
+        direction = self.request.query_params.get('direction')
+
+        if platform:
+            qs = qs.filter(platform=platform.lower())
+        if recipient_id:
+            qs = qs.filter(recipient_id=recipient_id)
+        if msg_status:
+            qs = qs.filter(status=msg_status.lower())
+        if direction:
+            qs = qs.filter(direction=direction.lower())
+
+        return qs
+
+
+class SocialMessageDetailView(generics.RetrieveDestroyAPIView):
+    """
+    GET: Retrieve direct message delivery details.
+    DELETE: Delete direct message log record.
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = SocialDirectMessage.objects.all()
+    serializer_class = SocialDirectMessageSerializer

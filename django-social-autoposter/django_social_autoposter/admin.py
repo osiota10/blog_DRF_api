@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
+from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
 
 
 class SocialPostLogInline(admin.TabularInline):
@@ -33,3 +33,11 @@ class SocialPostLogAdmin(admin.ModelAdmin):
     list_display = ('id', 'broadcast', 'platform', 'status', 'external_post_id', 'created_at')
     list_filter = ('status', 'platform', 'created_at')
     search_fields = ('platform', 'external_post_id', 'error_message')
+
+
+@admin.register(SocialDirectMessage)
+class SocialDirectMessageAdmin(admin.ModelAdmin):
+    list_display = ('id', 'platform', 'recipient_id', 'direction', 'status', 'external_message_id', 'created_at')
+    list_filter = ('platform', 'status', 'direction', 'created_at')
+    search_fields = ('recipient_id', 'sender_id', 'external_message_id', 'message')
+

@@ -5,11 +5,11 @@ from rest_framework import status
 import unittest
 from unittest.mock import patch, MagicMock
 
-from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog
-from .services import SocialBroadcastService, get_platform_credentials
+from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
+from .services import SocialBroadcastService, SocialMessagingService, get_platform_credentials
 from .adapters import (
     FacebookAdapter, InstagramAdapter, TwitterAdapter, LinkedInAdapter,
-    ThreadsAdapter, TikTokAdapter
+    ThreadsAdapter, TikTokAdapter, WhatsAppAdapter
 )
 
 User = get_user_model()
@@ -257,3 +257,258 @@ class SocialAutoPosterAPITests(TestCase):
         res_list = self.client.get('/social/broadcast/')
         self.assertEqual(res_list.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_list.data), 1)
+
+    @patch('django_social_autoposter.services.SocialMessagingService.send_message')
+    def test_social_message_send_api(self, mock_send_message):
+        mock_dm = SocialDirectMessage.objects.create(
+            platform='whatsapp',
+            recipient_id='+1234567890',
+            message='Hello there!',
+            direction='outbound',
+            status='delivered',
+            external_message_id='wamid.12345'
+        )
+        mock_send_message.return_value = mock_dm
+
+        payload = {
+            'platform': 'whatsapp',
+            'recipient_id': '+1234567890',
+            'message': 'Hello there!'
+        }
+        res = self.client.post('/social/messages/send/', payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['platform'], 'whatsapp')
+        self.assertEqual(res.data['recipient_id'], '+1234567890')
+        self.assertEqual(res.data['status'], 'delivered')
+        self.assertEqual(res.data['external_message_id'], 'wamid.12345')
+
+    def test_social_message_list_and_detail_api(self):
+        dm1 = SocialDirectMessage.objects.create(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='WhatsApp Msg',
+            direction='outbound',
+            status='delivered'
+        )
+        dm2 = SocialDirectMessage.objects.create(
+            platform='facebook',
+            recipient_id='fb_psid_456',
+            message='FB Msg',
+            direction='outbound',
+            status='failed'
+        )
+
+        # List all
+        res = self.client.get('/social/messages/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data), 2)
+
+        # Filter by platform
+        res_filtered = self.client.get('/social/messages/?platform=whatsapp')
+        self.assertEqual(res_filtered.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_filtered.data), 1)
+        self.assertEqual(res_filtered.data[0]['recipient_id'], '15551234567')
+
+        # Retrieve detail
+        res_detail = self.client.get(f'/social/messages/{dm1.id}/')
+        self.assertEqual(res_detail.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_detail.data['id'], dm1.id)
+        self.assertEqual(res_detail.data['message'], 'WhatsApp Msg')
+
+
+class SocialMessagingAdapterTests(TestCase):
+    @patch('requests.post')
+    def test_facebook_adapter_dm(self, mock_post):
+        # 1. Missing credentials
+        adapter_missing = FacebookAdapter({})
+        res_missing = adapter_missing.send_direct_message('12345', 'Hello')
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Missing Facebook Page Access Token", res_missing['error'])
+
+        # 2. Successful text message
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.content = b'{"recipient_id": "12345", "message_id": "mid.fb.123"}'
+        mock_res.json.return_value = {"recipient_id": "12345", "message_id": "mid.fb.123"}
+        mock_post.return_value = mock_res
+
+        adapter = FacebookAdapter({'access_token': 'fb_page_tok'})
+        res = adapter.send_direct_message('12345', 'Hello FB user')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['message_id'], 'mid.fb.123')
+
+        # 3. 24-hour customer window error
+        mock_err = MagicMock()
+        mock_err.status_code = 400
+        mock_err.content = b'{"error": {"message": "Message failed to send", "code": 10, "error_subcode": 2018001}}'
+        mock_err.json.return_value = {
+            "error": {"message": "Message failed to send", "code": 10, "error_subcode": 2018001}
+        }
+        mock_post.return_value = mock_err
+        res_err = adapter.send_direct_message('12345', 'Outside window')
+        self.assertFalse(res_err['success'])
+        self.assertIn("24-hour standard messaging window", res_err['error'])
+
+    @patch('requests.post')
+    def test_instagram_adapter_dm(self, mock_post):
+        # 1. Missing credentials
+        adapter_missing = InstagramAdapter({})
+        res_missing = adapter_missing.send_direct_message('ig_user_1', 'Hi IG')
+        self.assertFalse(res_missing['success'])
+
+        # 2. Success send
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.content = b'{"recipient_id": "ig_user_1", "message_id": "mid.ig.999"}'
+        mock_res.json.return_value = {"recipient_id": "ig_user_1", "message_id": "mid.ig.999"}
+        mock_post.return_value = mock_res
+
+        adapter = InstagramAdapter({'access_token': 'ig_tok_abc'})
+        res = adapter.send_direct_message('ig_user_1', 'Hi IG')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['message_id'], 'mid.ig.999')
+
+    @patch('requests.post')
+    def test_twitter_adapter_dm(self, mock_post):
+        # 1. Missing credentials
+        adapter_missing = TwitterAdapter({})
+        res_missing = adapter_missing.send_direct_message('x_user_123', 'Hey on X')
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Direct messaging requires User Context", res_missing['error'])
+
+        # 2. Success send via OAuth1
+        mock_res = MagicMock()
+        mock_res.status_code = 201
+        mock_res.content = b'{"data": {"dm_event_id": "evt_tw_12345", "dm_conversation_id": "conv_999"}}'
+        mock_res.json.return_value = {
+            "data": {"dm_event_id": "evt_tw_12345", "dm_conversation_id": "conv_999"}
+        }
+        mock_post.return_value = mock_res
+
+        adapter = TwitterAdapter({
+            'api_key': 'k', 'api_secret': 's',
+            'access_token': 't', 'access_token_secret': 'ts'
+        })
+        res = adapter.send_direct_message('x_user_123', 'Hey on X')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['message_id'], 'evt_tw_12345')
+        self.assertEqual(res['conversation_id'], 'conv_999')
+
+    @patch('requests.post')
+    def test_whatsapp_adapter(self, mock_post):
+        # 1. Missing credentials
+        adapter_missing = WhatsAppAdapter({})
+        res_missing = adapter_missing.send_direct_message('+1 (555) 000-1111', 'Hello')
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Missing WhatsApp credentials", res_missing['error'])
+
+        # 2. Phone normalization and text message send
+        mock_res = MagicMock()
+        mock_res.status_code = 200
+        mock_res.content = b'{"messages": [{"id": "wamid.HBgL..."}]}'
+        mock_res.json.return_value = {"messages": [{"id": "wamid.HBgL..."}]}
+        mock_post.return_value = mock_res
+
+        adapter = WhatsAppAdapter({
+            'page_or_account_id': '10987654321',
+            'access_token': 'wa_tok_123'
+        })
+        res = adapter.send_direct_message('+1 (555) 234-5678', 'Hello WhatsApp!')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['message_id'], 'wamid.HBgL...')
+
+        # Verify normalized phone number in request body
+        call_kwargs = mock_post.call_args[1]
+        self.assertEqual(call_kwargs['json']['to'], '15552345678')
+        self.assertEqual(call_kwargs['json']['type'], 'text')
+        self.assertEqual(call_kwargs['json']['text']['body'], 'Hello WhatsApp!')
+
+        # 3. Media message send
+        res_media = adapter.send_direct_message(
+            '15552345678',
+            'Image caption',
+            media_url='https://example.com/receipt.pdf',
+            extra_params={'media_type': 'document'}
+        )
+        self.assertTrue(res_media['success'])
+        call_kwargs_media = mock_post.call_args[1]
+        self.assertEqual(call_kwargs_media['json']['type'], 'document')
+        self.assertEqual(call_kwargs_media['json']['document']['link'], 'https://example.com/receipt.pdf')
+
+    @patch('requests.post')
+    def test_linkedin_adapter_dm(self, mock_post):
+        # 1. Missing access token
+        adapter_missing = LinkedInAdapter({})
+        res_missing = adapter_missing.send_direct_message('person_123', 'Hi on LinkedIn')
+        self.assertFalse(res_missing['success'])
+        self.assertIn("Missing LinkedIn Access Token", res_missing['error'])
+
+        # 2. Successful send with URN formatting
+        mock_res = MagicMock()
+        mock_res.status_code = 201
+        mock_res.content = b'{"value": {"conversation": "urn:li:fs_conversation:123"}, "id": "urn:li:fs_event:456"}'
+        mock_res.json.return_value = {
+            "value": {"conversation": "urn:li:fs_conversation:123"},
+            "id": "urn:li:fs_event:456"
+        }
+        mock_post.return_value = mock_res
+
+        adapter = LinkedInAdapter({'access_token': 'li_tok_abc'})
+        res = adapter.send_direct_message('12345', 'Hi on LinkedIn')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['message_id'], 'urn:li:fs_event:456')
+        self.assertEqual(res['conversation_id'], 'urn:li:fs_conversation:123')
+
+        # Verify URN formatted in payload
+        call_kwargs = mock_post.call_args[1]
+        recipients = call_kwargs['json']['recipients']
+        self.assertEqual(recipients, ['urn:li:person:12345'])
+
+
+class SocialMessagingServiceTests(TestCase):
+    def test_validation(self):
+        # Missing recipient
+        with self.assertRaises(ValueError):
+            SocialMessagingService.send_message(
+                platform='whatsapp',
+                recipient_id='',
+                message='Hello'
+            )
+
+        # Missing both message and media_url
+        with self.assertRaises(ValueError):
+            SocialMessagingService.send_message(
+                platform='whatsapp',
+                recipient_id='12345',
+                message='',
+                media_url=None
+            )
+
+    @patch('django_social_autoposter.adapters.whatsapp.WhatsAppAdapter.send_direct_message')
+    def test_service_execution(self, mock_send_dm):
+        mock_send_dm.return_value = {
+            'success': True,
+            'message_id': 'wamid.success.123',
+            'conversation_id': None,
+            'error': None,
+            'raw_response': {'id': 'wamid.success.123'}
+        }
+
+        # Enable whatsapp in DB
+        SocialPlatformConfig.objects.create(
+            platform='whatsapp',
+            is_enabled=True,
+            page_or_account_id='10987654321',
+            access_token='wa_tok_valid'
+        )
+
+        dm = SocialMessagingService.send_message(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='Order confirmation #4321'
+        )
+
+        self.assertEqual(dm.status, 'delivered')
+        self.assertEqual(dm.external_message_id, 'wamid.success.123')
+        self.assertEqual(dm.direction, 'outbound')
+        self.assertIsNone(dm.error_message)

@@ -74,3 +74,76 @@ class FacebookAdapter(BaseSocialAdapter):
                 'error': str(e),
                 'raw_response': None
             }
+
+    def send_direct_message(self, recipient_id: str, text: str, media_url: str = None, extra_params: dict = None) -> dict:
+        access_token = self.creds.get('access_token')
+        if not access_token:
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': 'Missing Facebook Page Access Token in configuration / .env',
+                'raw_response': None
+            }
+
+        url = "https://graph.facebook.com/v19.0/me/messages"
+        params = extra_params or {}
+
+        payload = {
+            'recipient': {'id': str(recipient_id)},
+            'access_token': access_token,
+        }
+
+        # Handle Message Tag or Standard Response
+        if params.get('tag'):
+            payload['messaging_type'] = 'MESSAGE_TAG'
+            payload['tag'] = params['tag']
+        else:
+            payload['messaging_type'] = params.get('messaging_type', 'RESPONSE')
+
+        if media_url:
+            payload['message'] = {
+                'attachment': {
+                    'type': params.get('attachment_type', 'image'),
+                    'payload': {'url': media_url, 'is_reusable': True}
+                }
+            }
+        else:
+            payload['message'] = {'text': text}
+
+        try:
+            res = requests.post(url, json=payload, timeout=20)
+            data = res.json() if res.content else {}
+
+            if res.status_code == 200 and 'message_id' in data:
+                return {
+                    'success': True,
+                    'message_id': str(data['message_id']),
+                    'conversation_id': None,
+                    'error': None,
+                    'raw_response': data
+                }
+
+            err_dict = data.get('error', {}) if isinstance(data.get('error'), dict) else {}
+            error_msg = err_dict.get('message') or str(data)
+            error_subcode = err_dict.get('error_subcode')
+            if error_subcode in [2018001, 2018028] or 'window' in error_msg.lower():
+                error_msg += " (Note: Outside 24-hour standard messaging window. Use an approved Meta Message Tag such as ACCOUNT_UPDATE, CONFIRMED_EVENT_UPDATE, or POST_PURCHASE_UPDATE in extra_params={'tag': '...'})."
+
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': f"Facebook Messenger Error ({res.status_code}): {error_msg}",
+                'raw_response': data
+            }
+        except Exception as e:
+            logger.exception("Error sending Facebook direct message")
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': str(e),
+                'raw_response': None
+            }
+

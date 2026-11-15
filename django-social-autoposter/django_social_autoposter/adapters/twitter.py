@@ -132,3 +132,97 @@ class TwitterAdapter(BaseSocialAdapter):
                 'error': str(e),
                 'raw_response': None
             }
+
+    def send_direct_message(self, recipient_id: str, text: str, media_url: str = None, extra_params: dict = None) -> dict:
+        api_key = self.creds.get('api_key')
+        api_secret = self.creds.get('api_secret')
+        access_token = self.creds.get('access_token')
+        access_token_secret = self.creds.get('access_token_secret')
+        bearer_token = self.creds.get('bearer_token')
+
+        auth = None
+        headers = {"Content-Type": "application/json"}
+
+        is_oauth1_attempt = bool(api_key or access_token_secret)
+
+        if is_oauth1_attempt:
+            missing_keys = []
+            if not api_key:
+                missing_keys.append("api_key")
+            if not api_secret:
+                missing_keys.append("api_secret")
+            if not access_token:
+                missing_keys.append("access_token")
+            if not access_token_secret:
+                missing_keys.append("access_token_secret")
+
+            if missing_keys:
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'conversation_id': None,
+                    'error': f"Missing Twitter OAuth 1.0a credentials: {', '.join(missing_keys)}.",
+                    'raw_response': None
+                }
+
+            try:
+                from requests_oauthlib import OAuth1
+                auth = OAuth1(api_key, client_secret=api_secret, resource_owner_key=access_token, resource_owner_secret=access_token_secret)
+            except ImportError:
+                return {
+                    'success': False,
+                    'message_id': None,
+                    'conversation_id': None,
+                    'error': "Library 'requests-oauthlib' is required for Twitter OAuth 1.0a.",
+                    'raw_response': None
+                }
+        elif bearer_token or access_token:
+            token = bearer_token or access_token
+            headers["Authorization"] = f"Bearer {token}"
+        else:
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': (
+                    "Missing Twitter credentials. Direct messaging requires User Context: "
+                    "OAuth 1.0a (with 'Read, write, and Direct message' permissions) or OAuth 2.0 with 'dm.write' scope."
+                ),
+                'raw_response': None
+            }
+
+        url = f"https://api.twitter.com/2/dm_conversations/with/{recipient_id}/messages"
+        payload = {"message": {"text": text}}
+
+        try:
+            res = requests.post(url, json=payload, headers=headers, auth=auth, timeout=20)
+            data = res.json() if res.content else {}
+
+            if res.status_code in [200, 201] and 'data' in data:
+                dm_data = data['data']
+                return {
+                    'success': True,
+                    'message_id': str(dm_data.get('dm_event_id')),
+                    'conversation_id': str(dm_data.get('dm_conversation_id')),
+                    'error': None,
+                    'raw_response': data
+                }
+
+            error_detail = data.get('detail') or data.get('errors') or str(data)
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': f"Twitter DM Error ({res.status_code}): {error_detail}",
+                'raw_response': data
+            }
+        except Exception as e:
+            logger.exception("Error sending Twitter direct message")
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': str(e),
+                'raw_response': None
+            }
+

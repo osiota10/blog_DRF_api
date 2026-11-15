@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.2) & `django-social-autoposter` (v0.2.0)
+# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.2) & `django-social-autoposter` (v0.3.0)
 
-Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn).
+Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting & Direct Messaging** (Facebook, Instagram, WhatsApp Business, Threads, TikTok, X/Twitter, LinkedIn).
 
 ---
 
@@ -139,4 +139,29 @@ TWITTER_ACCESS_TOKEN_SECRET=your_access_token_secret
 LINKEDIN_AUTO_POST_ENABLED=True
 LINKEDIN_ORGANIZATION_ID=987654321
 LINKEDIN_ACCESS_TOKEN=AQX...
+
+WHATSAPP_AUTO_POST_ENABLED=True
+WHATSAPP_PHONE_NUMBER_ID=109876543210987
+WHATSAPP_ACCESS_TOKEN=EAAG...
 ```
+
+---
+
+## 💬 Social Direct Messaging (`POST /social/messages/send/`)
+
+Send private messages on WhatsApp, Facebook Messenger, Instagram Direct, X (Twitter), or LinkedIn:
+
+```json
+{
+  "platform": "whatsapp",
+  "recipient_id": "+15551234567",
+  "message": "Hello! Your appointment is confirmed.",
+  "media_url": "https://example.com/receipt.pdf",
+  "extra_params": {
+    "media_type": "document"
+  }
+}
+```
+
+* **List Direct Messages:** `GET /social/messages/?platform=whatsapp&status=delivered`
+* **Detail Direct Message:** `GET /social/messages/{id}/`

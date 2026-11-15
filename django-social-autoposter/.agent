@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.2.0)
+# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.3.0)
 
-A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, Threads, TikTok, X (Twitter), LinkedIn, and more.
+A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, Threads, TikTok, X (Twitter), LinkedIn, and sending direct private messages across WhatsApp, Instagram, Facebook Messenger, X, and LinkedIn.
 
 ---
 
@@ -84,3 +84,66 @@ Required tokens in `.env` or `SocialPlatformConfig`:
 - `TWITTER_ACCESS_TOKEN_SECRET`: User Access Token Secret
 
 ⚠️ **Developer Portal Permission Warning**: In [developer.x.com](https://developer.x.com/) under Project & App settings -> **User authentication settings**, permissions must be set to **"Read and write"** before generating/regenerating the tokens.
+
+---
+
+## 💬 Direct Messaging Endpoints
+
+### 5. Send Direct Message (WhatsApp, Instagram, FB Messenger, X, LinkedIn)
+* **Endpoint:** `POST /social/messages/send/`
+* **Request Payload:**
+```json
+{
+  "platform": "whatsapp",
+  "recipient_id": "+15551234567",
+  "message": "Hello! Your appointment is confirmed for tomorrow at 10:00 AM.",
+  "media_url": "https://example.com/confirmation.pdf",
+  "extra_params": {
+    "media_type": "document",
+    "filename": "confirmation.pdf"
+  }
+}
+```
+* **Supported `platform` Values:**
+  * `"whatsapp"`: `recipient_id` is phone number (E.164 digits). Supports `extra_params`: `media_type` (`image`, `document`, `video`, `audio`), `template`.
+  * `"instagram"`: `recipient_id` is Instagram Scoped User ID (IGSID).
+  * `"facebook"`: `recipient_id` is Page-scoped User ID (PSID). Supports `extra_params`: `tag` (`ACCOUNT_UPDATE`, `CONFIRMED_EVENT_UPDATE`, `POST_PURCHASE_UPDATE`).
+  * `"twitter"`: `recipient_id` is X User ID (digits).
+  * `"linkedin"`: `recipient_id` is member ID (or `urn:li:person:...`).
+
+* **Response (HTTP 201 Created on delivery):**
+```json
+{
+  "id": 1,
+  "platform": "whatsapp",
+  "recipient_id": "+15551234567",
+  "sender_id": null,
+  "message": "Hello! Your appointment is confirmed for tomorrow at 10:00 AM.",
+  "media_url": "https://example.com/confirmation.pdf",
+  "direction": "outbound",
+  "status": "delivered",
+  "external_message_id": "wamid.HBgL...",
+  "conversation_id": null,
+  "error_message": null,
+  "response_data": {
+    "messages": [{"id": "wamid.HBgL..."}]
+  },
+  "extra_data": {
+    "media_type": "document"
+  },
+  "created_at": "2026-11-15T16:00:00Z",
+  "updated_at": "2026-11-15T16:00:01Z"
+}
+```
+
+### 6. List Direct Messages
+* **Endpoint:** `GET /social/messages/`
+* **Query Params:**
+  * `?platform=whatsapp`
+  * `?recipient_id=+15551234567`
+  * `?status=delivered`
+  * `?direction=outbound`
+
+### 7. Retrieve Message Details
+* **Endpoint:** `GET /social/messages/<id>/`
+* **Delete Message Log:** `DELETE /social/messages/<id>/`

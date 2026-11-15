@@ -99,3 +99,67 @@ class LinkedInAdapter(BaseSocialAdapter):
                 'error': str(e),
                 'raw_response': None
             }
+
+    def send_direct_message(self, recipient_id: str, text: str, media_url: str = None, extra_params: dict = None) -> dict:
+        access_token = self.creds.get('access_token')
+        if not access_token:
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': 'Missing LinkedIn Access Token in configuration / .env',
+                'raw_response': None
+            }
+
+        url = "https://api.linkedin.com/v2/messages"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json"
+        }
+
+        recipient_urn = str(recipient_id)
+        if not recipient_urn.startswith("urn:li:"):
+            recipient_urn = f"urn:li:person:{recipient_urn}"
+
+        payload = {
+            "recipients": [recipient_urn],
+            "message": {"body": text}
+        }
+
+        try:
+            res = requests.post(url, json=payload, headers=headers, timeout=20)
+            data = res.json() if res.content else {}
+
+            if res.status_code in [200, 201]:
+                msg_id = data.get('id') or data.get('entity', {}).get('id') or str(res.status_code)
+                conv_id = data.get('conversation') or data.get('value', {}).get('conversation') or data.get('conversationUrn')
+                return {
+                    'success': True,
+                    'message_id': str(msg_id),
+                    'conversation_id': str(conv_id) if conv_id else None,
+                    'error': None,
+                    'raw_response': data
+                }
+
+            error_msg = data.get('message') or str(data)
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': (
+                    f"LinkedIn Messaging Error ({res.status_code}): {error_msg}. "
+                    "Notice: Direct messaging on LinkedIn requires approved LinkedIn Partner / InMail access."
+                ),
+                'raw_response': data
+            }
+        except Exception as e:
+            logger.exception("Error sending LinkedIn direct message")
+            return {
+                'success': False,
+                'message_id': None,
+                'conversation_id': None,
+                'error': str(e),
+                'raw_response': None
+            }
+
