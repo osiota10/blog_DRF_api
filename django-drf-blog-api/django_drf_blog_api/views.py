@@ -26,15 +26,15 @@ class PostDetailView(generics.RetrieveAPIView):
     permission_classes = [AllowAny,]
 
 
-class CategoryView(generics.ListAPIView):
+class CategoryView(generics.ListCreateAPIView):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticatedOrReadOnly,]
 
-class TagView(generics.ListAPIView):
+class TagView(generics.ListCreateAPIView):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
-    permission_classes = [AllowAny,]
+    permission_classes = [IsAuthenticatedOrReadOnly,]
 
 from media_library.models import MediaAsset
 
@@ -66,17 +66,36 @@ class MagazineSeriesDetailView(generics.RetrieveUpdateDestroyAPIView):  # Public
 
     def get_object(self):
         queryset = self.filter_queryset(self.get_queryset())
-        val = self.kwargs.get('slug') or self.kwargs.get('pk') or (self.request.query_params.get('id') if hasattr(self.request, 'query_params') else None) or (self.request.data.get('id') if hasattr(self.request, 'data') else None)
+        
+        req_id = None
+        if hasattr(self.request, 'data') and isinstance(self.request.data, dict):
+            req_id = self.request.data.get('id')
+        if not req_id and hasattr(self.request, 'query_params') and self.request.query_params:
+            req_id = self.request.query_params.get('id')
+
+        val = self.kwargs.get('slug') or self.kwargs.get('pk')
+
+        # 1. Try URL parameter if numeric ID (e.g. /magazines/1)
+        if val and str(val).isdigit():
+            obj = queryset.filter(pk=val).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+
+        # 2. Try ID from payload/query params if numeric
+        if req_id and str(req_id).isdigit():
+            obj = queryset.filter(pk=req_id).first()
+            if obj:
+                self.check_object_permissions(self.request, obj)
+                return obj
+
+        # 3. Try URL parameter as slug
         if val:
-            if str(val).isdigit():
-                obj = queryset.filter(pk=val).first()
-                if obj:
-                    self.check_object_permissions(self.request, obj)
-                    return obj
             obj = queryset.filter(slug=val).first()
             if obj:
                 self.check_object_permissions(self.request, obj)
                 return obj
+
         return super().get_object()
 
     def perform_update(self, serializer):
@@ -91,6 +110,7 @@ class MagazineSeriesDetailView(generics.RetrieveUpdateDestroyAPIView):  # Public
             serializer.save(cover_media=cover_media)
         else:
             serializer.save()
+
 
 
 class IsSuperAdminOrOwnerOrReadOnly(BasePermission):
@@ -205,22 +225,30 @@ class AuthorView(APIView):  # Profile Endpoint (Public GET / Authenticated Owner
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class PostView(APIView):  # Authors
+class PostView(APIView):  # Authors & Admins
     permission_classes = [IsAuthenticated,]
 
     def get(self, request, *args, **kwargs):
-        author_profile, _ = Author.objects.get_or_create(user=self.request.user)
-        posts = Post.objects.filter(author=author_profile).order_by('-pub_date')
+        if request.user.is_superuser or request.user.is_staff:
+            posts = Post.objects.all().order_by('-pub_date')
+        else:
+            author_profile, _ = Author.objects.get_or_create(user=self.request.user)
+            posts = Post.objects.filter(author=author_profile).order_by('-pub_date')
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
         post_id = request.data.get('id')
+        if not post_id:
+            return Response({'error': 'Post ID is required.'}, status=400)
+
         author_profile, _ = Author.objects.get_or_create(user=self.request.user)
 
         try:
-            post = Post.objects.get(
-                id=post_id, author=author_profile)
+            if request.user.is_superuser or request.user.is_staff:
+                post = Post.objects.get(id=post_id)
+            else:
+                post = Post.objects.get(id=post_id, author=author_profile)
         except Post.DoesNotExist:
             return Response({'error': 'Post not found.'}, status=404)
 
@@ -232,16 +260,37 @@ class PostView(APIView):  # Authors
         featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
         featured_image_url_caption = request.data.get('featured_image_url_caption', post.featured_image_url_caption)
         magazine_series_id = request.data.get('magazine_series_id') or request.data.get('magazine_series')
+        category_id = request.data.get('category')
+        slug = request.data.get('slug')
+        author_id = request.data.get('author_id') or request.data.get('author')
 
         pub_date = request.data.get('pub_date')
         if pub_date:
             post.pub_date = pub_date
+
+        if slug:
+            post.slug = slug
+
+        if category_id:
+            try:
+                cat_obj = Category.objects.get(id=category_id) if (isinstance(category_id, int) or str(category_id).isdigit()) else Category.objects.get(name=category_id)
+                post.category = cat_obj
+            except Category.DoesNotExist:
+                pass
+
+        if (request.user.is_superuser or request.user.is_staff) and author_id:
+            try:
+                post.author = Author.objects.get(id=author_id)
+            except Author.DoesNotExist:
+                pass
 
         if magazine_series_id:
             try:
                 post.magazine_series = MagazineSeries.objects.get(id=magazine_series_id)
             except MagazineSeries.DoesNotExist:
                 pass
+        elif magazine_series_id is None and 'magazine_series_id' in request.data:
+            post.magazine_series = None
 
         if featured_media_id:
             try:
@@ -269,17 +318,26 @@ class PostView(APIView):  # Authors
         excerpt = request.data.get('excerpt', '')
         read_time = request.data.get('read_time') or request.data.get('readTime') or 0
         pub_date = request.data.get('pub_date')
+        slug = request.data.get('slug')
         featured_media_id = request.data.get('featured_media_id') or request.data.get('featured_media')
         featured_image_url = request.data.get('featured_image_url') or request.data.get('featured_image')
         featured_image_url_caption = request.data.get('featured_image_url_caption', '')
         magazine_series_id = request.data.get('magazine_series_id') or request.data.get('magazine_series')
+        author_id = request.data.get('author_id') or request.data.get('author')
 
         if not title or not content or not category_id:
             return Response({'error': 'Title, Content and Category are required fields.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            category = Category.objects.get(id=category_id) if isinstance(category_id, int) else Category.objects.get(name=category_id)
-            author_profile, _ = Author.objects.get_or_create(user=request.user)
+            category = Category.objects.get(id=category_id) if (isinstance(category_id, int) or str(category_id).isdigit()) else Category.objects.get(name=category_id)
+            
+            if (request.user.is_superuser or request.user.is_staff) and author_id:
+                try:
+                    author_profile = Author.objects.get(id=author_id)
+                except Author.DoesNotExist:
+                    author_profile, _ = Author.objects.get_or_create(user=request.user)
+            else:
+                author_profile, _ = Author.objects.get_or_create(user=request.user)
 
             featured_media = None
             if featured_media_id:
@@ -302,6 +360,8 @@ class PostView(APIView):  # Authors
                 'featured_image_url_caption': featured_image_url_caption,
                 'magazine_series': magazine_series
             }
+            if slug:
+                create_kwargs['slug'] = slug
             if pub_date:
                 create_kwargs['pub_date'] = pub_date
 
@@ -316,7 +376,10 @@ class PostView(APIView):  # Authors
         post_id = request.data.get('id')
         author_profile, _ = Author.objects.get_or_create(user=self.request.user)
         try:
-            post = Post.objects.get(id=post_id, author=author_profile)
+            if self.request.user.is_superuser or self.request.user.is_staff:
+                post = Post.objects.get(id=post_id)
+            else:
+                post = Post.objects.get(id=post_id, author=author_profile)
             post.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Post.DoesNotExist:
