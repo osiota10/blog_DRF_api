@@ -1,5 +1,6 @@
 import requests
 import logging
+import os
 from .base import BaseSocialAdapter
 
 logger = logging.getLogger(__name__)
@@ -7,6 +8,104 @@ logger = logging.getLogger(__name__)
 
 class LinkedInAdapter(BaseSocialAdapter):
     platform_name = "linkedin"
+
+    def _fetch_image_bytes(self, image_source: str):
+        if not image_source:
+            return None
+        image_source = str(image_source).strip()
+
+        # 1. Full HTTP/HTTPS URL
+        if image_source.startswith(('http://', 'https://')):
+            try:
+                res = requests.get(image_source, timeout=20)
+                if res.status_code == 200:
+                    return res.content
+                logger.warning(f"Failed to fetch image from URL {image_source} ({res.status_code})")
+            except Exception as e:
+                logger.warning(f"Exception downloading image {image_source}: {e}")
+            return None
+
+        # 2. Local filesystem path
+        if os.path.exists(image_source):
+            try:
+                with open(image_source, 'rb') as f:
+                    return f.read()
+            except Exception as e:
+                logger.warning(f"Exception reading local image file {image_source}: {e}")
+            return None
+
+        # 3. Relative to Django MEDIA_ROOT if available
+        try:
+            from django.conf import settings
+            media_root = getattr(settings, 'MEDIA_ROOT', None)
+            if media_root:
+                clean_rel = image_source.lstrip('/')
+                media_url = getattr(settings, 'MEDIA_URL', '/media/').strip('/')
+                if clean_rel.startswith(media_url):
+                    clean_rel = clean_rel[len(media_url):].lstrip('/')
+                full_path = os.path.join(media_root, clean_rel)
+                if os.path.exists(full_path):
+                    with open(full_path, 'rb') as f:
+                        return f.read()
+        except Exception as e:
+            logger.warning(f"Exception reading media file relative to MEDIA_ROOT: {e}")
+
+        return None
+
+    def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes) -> str:
+        """
+        Registers an upload with LinkedIn Assets API, uploads the raw image bytes,
+        and returns the Digital Media Asset URN (e.g. urn:li:digitalmediaAsset:...).
+        """
+        register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "registerUploadRequest": {
+                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                "owner": author_urn,
+                "serviceRelationships": [
+                    {
+                        "relationshipType": "OWNER",
+                        "identifier": "urn:li:userGeneratedContent"
+                    }
+                ]
+            }
+        }
+
+        try:
+            reg_res = requests.post(register_url, json=payload, headers=headers, timeout=20)
+            if reg_res.status_code not in [200, 201]:
+                logger.warning(f"LinkedIn image registerUpload failed ({reg_res.status_code}): {reg_res.text}")
+                return None
+
+            data = reg_res.json() if reg_res.content else {}
+            val = data.get('value', {})
+            asset_urn = val.get('asset')
+            upload_mechanism = val.get('uploadMechanism', {})
+            media_upload_http = upload_mechanism.get('com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest', {})
+            upload_url = media_upload_http.get('uploadUrl')
+
+            if not upload_url or not asset_urn:
+                logger.warning(f"LinkedIn registerUpload response missing uploadUrl or asset: {data}")
+                return None
+
+            upload_headers = dict(media_upload_http.get('headers') or {})
+            if 'Authorization' not in upload_headers:
+                upload_headers['Authorization'] = f"Bearer {access_token}"
+
+            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=30)
+            if upload_res.status_code not in [200, 201]:
+                logger.warning(f"LinkedIn image binary upload failed ({upload_res.status_code}): {upload_res.text}")
+                return None
+
+            return asset_urn
+        except Exception as e:
+            logger.exception(f"Error during LinkedIn image upload: {e}")
+            return None
 
     def publish(self, broadcast) -> dict:
         org_or_person_id = self.creds.get('page_or_account_id')
@@ -41,23 +140,48 @@ class LinkedInAdapter(BaseSocialAdapter):
             commentary_parts.append(broadcast.title)
         if broadcast.message:
             commentary_parts.append(broadcast.message)
-        commentary = "\n\n".join(filter(None, commentary_parts))
 
-        share_content = {
-            "shareCommentary": {"text": commentary}
-        }
+        # 1. Attempt to upload image if image_url is provided
+        asset_urn = None
+        if broadcast.image_url:
+            image_bytes = self._fetch_image_bytes(broadcast.image_url)
+            if image_bytes:
+                asset_urn = self._upload_image(author_urn, access_token, image_bytes)
+            else:
+                logger.warning(f"Could not retrieve image bytes from image_url: {broadcast.image_url}")
 
-        if broadcast.link_url:
-            share_content["shareMediaCategory"] = "ARTICLE"
-            share_content["media"] = [{
-                "status": "READY",
-                "originalUrl": broadcast.link_url,
-                "title": {"text": broadcast.title or "Read More"}
-            }]
-            if broadcast.image_url:
-                share_content["media"][0]["thumbnails"] = [{"url": broadcast.image_url}]
+        # 2. Build share_content based on uploaded asset or link
+        if asset_urn:
+            if broadcast.link_url:
+                commentary_parts.append(broadcast.link_url)
+            commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"
+
+            share_content = {
+                "shareCommentary": {"text": commentary},
+                "shareMediaCategory": "IMAGE",
+                "media": [{
+                    "status": "READY",
+                    "media": asset_urn,
+                    "title": {"text": broadcast.title or "Post Image"}
+                }]
+            }
+        elif broadcast.link_url:
+            commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"
+            share_content = {
+                "shareCommentary": {"text": commentary},
+                "shareMediaCategory": "ARTICLE",
+                "media": [{
+                    "status": "READY",
+                    "originalUrl": broadcast.link_url,
+                    "title": {"text": broadcast.title or "Read More"}
+                }]
+            }
         else:
-            share_content["shareMediaCategory"] = "NONE"
+            commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"
+            share_content = {
+                "shareCommentary": {"text": commentary},
+                "shareMediaCategory": "NONE"
+            }
 
         payload = {
             "author": author_urn,

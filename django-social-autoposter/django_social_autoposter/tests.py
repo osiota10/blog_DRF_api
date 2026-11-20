@@ -216,6 +216,81 @@ class SocialAutoPosterModelAndServiceTests(TestCase):
         self.assertTrue(res_ok['success'])
         self.assertEqual(res_ok['post_id'], 'v_pub_tiktok_456')
 
+    @patch('requests.put')
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_linkedin_adapter_publish_image_and_article(self, mock_post, mock_get, mock_put):
+        adapter = LinkedInAdapter({
+            'page_or_account_id': '12345678',
+            'access_token': 'li_test_token'
+        })
+
+        # 1. Post with image_url -> registers upload, PUTs binary, posts as IMAGE
+        mock_get_res = MagicMock()
+        mock_get_res.status_code = 200
+        mock_get_res.content = b'fake_image_bytes'
+        mock_get.return_value = mock_get_res
+
+        mock_reg_res = MagicMock()
+        mock_reg_res.status_code = 200
+        mock_reg_res.content = b'{"value": {"asset": "urn:li:digitalmediaAsset:123", "uploadMechanism": {"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {"uploadUrl": "https://upload.linkedin.com/123"}}}}'
+        mock_reg_res.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:123",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://upload.linkedin.com/123"
+                    }
+                }
+            }
+        }
+
+        mock_ugc_res = MagicMock()
+        mock_ugc_res.status_code = 201
+        mock_ugc_res.content = b'{"id": "urn:li:share:98765"}'
+        mock_ugc_res.json.return_value = {"id": "urn:li:share:98765"}
+
+        mock_post.side_effect = [mock_reg_res, mock_ugc_res]
+
+        mock_put_res = MagicMock()
+        mock_put_res.status_code = 201
+        mock_put.return_value = mock_put_res
+
+        broadcast_image = SocialBroadcast.objects.create(
+            title="Image Post on LinkedIn",
+            message="Check out our visual announcement",
+            image_url="https://example.com/banner.jpg",
+            link_url="https://example.com/blog/article"
+        )
+
+        res = adapter.publish(broadcast_image)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'urn:li:share:98765')
+        self.assertIn("https://www.linkedin.com/feed/update/urn:li:share:98765", res['post_url'])
+
+        # Check UGC post payload
+        ugc_call = mock_post.call_args_list[1]
+        payload = ugc_call[1]['json']
+        share_content = payload['specificContent']['com.linkedin.ugc.ShareContent']
+        self.assertEqual(share_content['shareMediaCategory'], 'IMAGE')
+        self.assertEqual(share_content['media'][0]['media'], 'urn:li:digitalmediaAsset:123')
+        self.assertIn("https://example.com/blog/article", share_content['shareCommentary']['text'])
+
+        # 2. Post with article link only (no image)
+        mock_post.side_effect = None
+        mock_post.return_value = mock_ugc_res
+        broadcast_link = SocialBroadcast.objects.create(
+            title="Article Post",
+            message="Article without image",
+            link_url="https://example.com/blog/article2"
+        )
+        res_link = adapter.publish(broadcast_link)
+        self.assertTrue(res_link['success'])
+        ugc_call_link = mock_post.call_args[1]['json']
+        share_content_link = ugc_call_link['specificContent']['com.linkedin.ugc.ShareContent']
+        self.assertEqual(share_content_link['shareMediaCategory'], 'ARTICLE')
+        self.assertEqual(share_content_link['media'][0]['originalUrl'], 'https://example.com/blog/article2')
+
 
 
 class SocialAutoPosterAPITests(TestCase):

@@ -7,5 +7,5 @@ Pages & Messenger, Instagram Business & Direct, WhatsApp Business Cloud API,
 Threads, TikTok, X (Twitter), and LinkedIn with generic model linking and audit logging.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __author__ = "Osiota Samuel Obrozie"

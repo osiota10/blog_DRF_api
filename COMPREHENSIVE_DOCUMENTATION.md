@@ -23,8 +23,8 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-social-autoposter`** | **`0.4.0`** | Standalone Multi-Platform Social Auto-Poster, Direct Messaging & Scheduler | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn, and schedule future publications via built-in management command. |
-| **`django-drf-blog-api`** | **`0.3.2`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
+| **`django-social-autoposter`** | **`0.4.1`** | Standalone Multi-Platform Social Auto-Poster, Direct Messaging & Scheduler | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn (with native 3-step image asset upload), send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn, and schedule future publications via built-in management command. |
+| **`django-drf-blog-api`** | **`0.3.3`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration (with native LinkedIn image uploads). |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
 
@@ -471,6 +471,12 @@ LINKEDIN_AUTO_POST_ENABLED=True
 LINKEDIN_ORGANIZATION_ID=987654321
 LINKEDIN_ACCESS_TOKEN=AQX...
 ```
+
+> **LinkedIn Native Image Upload Workflow**:
+> LinkedIn does not display images if an arbitrary external URL is passed in an article preview payload. In both `django-social-autoposter` and `django-drf-blog-api`, images (via `image_url` or `post.featured_image`) are handled through LinkedIn's official **3-step Assets pipeline**:
+> 1. Registers the upload via `POST https://api.linkedin.com/v2/assets?action=registerUpload` using recipe `urn:li:digitalmediaRecipe:feedshare-image`.
+> 2. Uploads the raw binary image data via `PUT <uploadUrl>`.
+> 3. Publishes the post via `POST https://api.linkedin.com/v2/ugcPosts` with `shareMediaCategory: "IMAGE"`, referencing `urn:li:digitalmediaAsset:...`, and seamlessly appending the article link to the post commentary. If image upload fails or no image is supplied, it gracefully falls back to `ARTICLE` or `NONE`.
 
 > **Important Twitter / X API v2 Authentication Note**:
 > Twitter's `POST /2/tweets` endpoint **rejects OAuth 2.0 Application-Only Bearer Tokens** with `403 Forbidden` (`"Authenticating with OAuth 2.0 Application-Only is forbidden for this endpoint"`).

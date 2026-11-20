@@ -5,7 +5,7 @@ from rest_framework import status
 from unittest.mock import patch
 from .models import MagazineSeries, Post, Category, SocialPlatformConfig, SocialPostLog
 from .signals import dispatch_social_posts
-from .social_posters import ThreadsPoster, TikTokPoster
+from .social_posters import ThreadsPoster, TikTokPoster, LinkedInPoster
 
 User = get_user_model()
 
@@ -141,3 +141,60 @@ class SocialAutoPosterTests(TestCase):
         self.assertTrue(res_tt['success'])
         self.assertEqual(res_tt['post_id'], 'tt_pub_1')
         patch.stopall()
+
+    @patch('requests.put')
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_linkedin_poster_with_image_and_article(self, mock_post, mock_get, mock_put):
+        post_with_image = Post.objects.create(
+            title='AI Advances in 2026',
+            excerpt='A breakthrough year for AI agents.',
+            featured_image_url='https://example.com/ai_image.png',
+            category=self.category
+        )
+
+        linkedin_poster = LinkedInPoster({
+            'page_or_account_id': '12345678',
+            'access_token': 'li_test_tok'
+        })
+
+        # Mock image download
+        mock_get_res = type('Response', (), {'status_code': 200, 'content': b'image_data'})()
+        mock_get.return_value = mock_get_res
+
+        # Mock registerUpload and ugcPosts
+        mock_reg_res = type('Response', (), {
+            'status_code': 200,
+            'content': b'{"value": {"asset": "urn:li:digitalmediaAsset:li_img_123", "uploadMechanism": {"com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {"uploadUrl": "https://upload.linkedin.com/image"}}}}',
+            'json': lambda s: {
+                "value": {
+                    "asset": "urn:li:digitalmediaAsset:li_img_123",
+                    "uploadMechanism": {
+                        "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                            "uploadUrl": "https://upload.linkedin.com/image"
+                        }
+                    }
+                }
+            }
+        })()
+        mock_ugc_res = type('Response', (), {
+            'status_code': 201,
+            'content': b'{"id": "urn:li:share:li_post_789"}',
+            'json': lambda s: {"id": "urn:li:share:li_post_789"}
+        })()
+        mock_post.side_effect = [mock_reg_res, mock_ugc_res]
+
+        mock_put_res = type('Response', (), {'status_code': 201, 'content': b''})()
+        mock_put.return_value = mock_put_res
+
+        res = linkedin_poster.publish(post_with_image, 'https://example.com/blog/ai-advances')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'urn:li:share:li_post_789')
+        self.assertIn("https://www.linkedin.com/feed/update/urn:li:share:li_post_789", res['post_url'])
+
+        # Verify UGC payload had IMAGE media category
+        ugc_call = mock_post.call_args_list[1]
+        payload = ugc_call[1]['json']
+        share_content = payload['specificContent']['com.linkedin.ugc.ShareContent']
+        self.assertEqual(share_content['shareMediaCategory'], 'IMAGE')
+        self.assertEqual(share_content['media'][0]['media'], 'urn:li:digitalmediaAsset:li_img_123')

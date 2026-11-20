@@ -221,6 +221,101 @@ class XPoster(BaseSocialPoster):
 
 
 class LinkedInPoster(BaseSocialPoster):
+    def _fetch_image_bytes(self, image_source: str):
+        if not image_source:
+            return None
+        image_source = str(image_source).strip()
+
+        # 1. Full HTTP/HTTPS URL
+        if image_source.startswith(('http://', 'https://')):
+            try:
+                res = requests.get(image_source, timeout=20)
+                if res.status_code == 200:
+                    return res.content
+                logger.warning(f"Failed to fetch image from URL {image_source} ({res.status_code})")
+            except Exception as e:
+                logger.warning(f"Exception downloading image {image_source}: {e}")
+            return None
+
+        # 2. Local filesystem path
+        import os
+        if os.path.exists(image_source):
+            try:
+                with open(image_source, 'rb') as f:
+                    return f.read()
+            except Exception as e:
+                logger.warning(f"Exception reading local image file {image_source}: {e}")
+            return None
+
+        # 3. Relative to Django MEDIA_ROOT if available
+        try:
+            from django.conf import settings
+            media_root = getattr(settings, 'MEDIA_ROOT', None)
+            if media_root:
+                clean_rel = image_source.lstrip('/')
+                media_url = getattr(settings, 'MEDIA_URL', '/media/').strip('/')
+                if clean_rel.startswith(media_url):
+                    clean_rel = clean_rel[len(media_url):].lstrip('/')
+                full_path = os.path.join(media_root, clean_rel)
+                if os.path.exists(full_path):
+                    with open(full_path, 'rb') as f:
+                        return f.read()
+        except Exception as e:
+            logger.warning(f"Exception reading media file relative to MEDIA_ROOT: {e}")
+
+        return None
+
+    def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes) -> str:
+        register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "X-Restli-Protocol-Version": "2.0.0",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "registerUploadRequest": {
+                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                "owner": author_urn,
+                "serviceRelationships": [
+                    {
+                        "relationshipType": "OWNER",
+                        "identifier": "urn:li:userGeneratedContent"
+                    }
+                ]
+            }
+        }
+
+        try:
+            reg_res = requests.post(register_url, json=payload, headers=headers, timeout=20)
+            if reg_res.status_code not in [200, 201]:
+                logger.warning(f"LinkedIn image registerUpload failed ({reg_res.status_code}): {reg_res.text}")
+                return None
+
+            data = reg_res.json() if reg_res.content else {}
+            val = data.get('value', {})
+            asset_urn = val.get('asset')
+            upload_mechanism = val.get('uploadMechanism', {})
+            media_upload_http = upload_mechanism.get('com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest', {})
+            upload_url = media_upload_http.get('uploadUrl')
+
+            if not upload_url or not asset_urn:
+                logger.warning(f"LinkedIn registerUpload response missing uploadUrl or asset: {data}")
+                return None
+
+            upload_headers = dict(media_upload_http.get('headers') or {})
+            if 'Authorization' not in upload_headers:
+                upload_headers['Authorization'] = f"Bearer {access_token}"
+
+            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=30)
+            if upload_res.status_code not in [200, 201]:
+                logger.warning(f"LinkedIn image binary upload failed ({upload_res.status_code}): {upload_res.text}")
+                return None
+
+            return asset_urn
+        except Exception as e:
+            logger.exception(f"Error during LinkedIn image upload: {e}")
+            return None
+
     def publish(self, post, article_url: str) -> dict:
         org_id = self.creds.get('page_or_account_id')
         access_token = self.creds.get('access_token')
@@ -228,34 +323,76 @@ class LinkedInPoster(BaseSocialPoster):
         if not org_id or not access_token:
             return {'success': False, 'error': 'Missing LinkedIn Organization ID or Access Token'}
 
+        if str(org_id).startswith("urn:li:"):
+            author_urn = str(org_id)
+        elif str(org_id).isdigit():
+            author_urn = f"urn:li:organization:{org_id}"
+        else:
+            author_urn = f"urn:li:person:{org_id}"
+
         url = "https://api.linkedin.com/v2/ugcPosts"
         headers = {
             "Authorization": f"Bearer {access_token}",
             "X-Restli-Protocol-Version": "2.0.0",
             "Content-Type": "application/json"
         }
-        author_urn = f"urn:li:organization:{org_id}" if org_id.isdigit() else f"urn:li:person:{org_id}"
+
+        commentary_parts = [post.title]
+        if post.excerpt:
+            commentary_parts.append(post.excerpt)
+
+        # Check for featured image and upload to LinkedIn Assets if available
+        image_source = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        asset_urn = None
+        if image_source:
+            image_bytes = self._fetch_image_bytes(image_source)
+            if image_bytes:
+                asset_urn = self._upload_image(author_urn, access_token, image_bytes)
+
+        if asset_urn:
+            if article_url:
+                commentary_parts.append(f"Read full article: {article_url}")
+            commentary = "\n\n".join(filter(None, commentary_parts))
+
+            share_content = {
+                "shareCommentary": {"text": commentary},
+                "shareMediaCategory": "IMAGE",
+                "media": [{
+                    "status": "READY",
+                    "media": asset_urn,
+                    "title": {"text": post.title or "Featured Image"}
+                }]
+            }
+        else:
+            commentary = "\n\n".join(filter(None, commentary_parts))
+            share_content = {
+                "shareCommentary": {"text": commentary},
+                "shareMediaCategory": "ARTICLE",
+                "media": [{
+                    "status": "READY",
+                    "originalUrl": article_url,
+                    "title": {"text": post.title}
+                }]
+            }
+
         payload = {
             "author": author_urn,
             "lifecycleState": "PUBLISHED",
             "specificContent": {
-                "com.linkedin.ugc.ShareContent": {
-                    "shareCommentary": {"text": f"{post.title}\n\n{post.excerpt or ''}"},
-                    "shareMediaCategory": "ARTICLE",
-                    "media": [{
-                        "status": "READY",
-                        "originalUrl": article_url,
-                        "title": {"text": post.title}
-                    }]
-                }
+                "com.linkedin.ugc.ShareContent": share_content
             },
             "visibility": {"com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC"}
         }
         try:
-            res = requests.post(url, json=payload, headers=headers, timeout=15)
-            data = res.json()
+            res = requests.post(url, json=payload, headers=headers, timeout=20)
+            data = res.json() if res.content else {}
             if res.status_code in [200, 201] and 'id' in data:
-                return {'success': True, 'post_id': data['id'], 'post_url': ''}
+                ugc_id = data['id']
+                return {
+                    'success': True,
+                    'post_id': str(ugc_id),
+                    'post_url': f"https://www.linkedin.com/feed/update/{ugc_id}"
+                }
             return {'success': False, 'error': str(data)}
         except Exception as e:
             return {'success': False, 'error': str(e)}
