@@ -2,9 +2,9 @@
 django-social-autoposter
 ========================
 
-A standalone, modular Django REST Framework package for broadcasting social media posts and sending direct private messages across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **0.3.0**
+Current Version: **0.4.0**
 
 Quick Start
 -----------
@@ -60,23 +60,36 @@ Python Service Usage
 
 .. code-block:: python
 
+    from datetime import timedelta
+    from django.utils import timezone
     from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
-    # 1. Multi-Platform Broadcast
+    # 1. Immediate or Scheduled Broadcast
     broadcast = SocialBroadcastService.broadcast(
         title="Product Launch",
         message="Check out our new release!",
         link_url="https://example.com/product",
         image_url="https://example.com/image.jpg",
         platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
+        scheduled_at=timezone.now() + timedelta(days=1),  # Optional future scheduling
         source_instance=my_instance
     )
 
-    # 2. Social Direct Messaging
+    # 2. Social Direct Messaging (Immediate or Scheduled)
     dm = SocialMessagingService.send_message(
         platform='whatsapp',
         recipient_id='+1234567890',
         message='Your order has been verified and processed.',
         media_url='https://example.com/receipt.pdf',
-        extra_params={'media_type': 'document'}
+        extra_params={'media_type': 'document'},
+        scheduled_at=timezone.now() + timedelta(hours=4)
     )
+
+Scheduler Management Command
+----------------------------
+
+Run periodically via cron or task runner:
+
+.. code-block:: bash
+
+    python manage.py process_scheduled_social_posts

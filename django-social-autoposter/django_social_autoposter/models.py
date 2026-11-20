@@ -45,12 +45,25 @@ class SocialBroadcast(models.Model):
     """
     Represents a unified broadcast event targeting one or more social media platforms.
     Can be initiated directly via API or linked generically to any model (Post, Product, Event, etc.).
+    Supports immediate publishing or scheduled future publication.
     """
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('scheduled', 'Scheduled'),
+        ('publishing', 'Publishing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
     title = models.CharField(max_length=255, blank=True, null=True)
     message = models.TextField(help_text="Primary broadcast message or caption")
     link_url = models.URLField(max_length=500, blank=True, null=True, help_text="Target article / page URL to share")
     image_url = models.URLField(max_length=500, blank=True, null=True, help_text="Image attachment URL")
     target_platforms = models.JSONField(default=list, blank=True, help_text="Platforms targeted for this broadcast")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
+    scheduled_at = models.DateTimeField(blank=True, null=True, help_text="Future date/time to publish this broadcast. If None, published immediately.")
+    published_at = models.DateTimeField(blank=True, null=True, help_text="Timestamp when broadcast was actually published to platforms.")
 
     # Generic relation to any source model (Post, Product, Event, Listing, etc.)
     content_type = models.ForeignKey(ContentType, on_delete=models.SET_NULL, null=True, blank=True)
@@ -61,7 +74,7 @@ class SocialBroadcast(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Broadcast #{self.id}: {self.title or self.message[:30]}"
+        return f"Broadcast #{self.id} [{self.status}]: {self.title or self.message[:30]}"
 
     class Meta:
         ordering = ['-created_at']
@@ -97,8 +110,10 @@ class SocialPostLog(models.Model):
 class SocialDirectMessage(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
+        ('scheduled', 'Scheduled'),
         ('delivered', 'Delivered'),
         ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
     ]
     DIRECTION_CHOICES = [
         ('outbound', 'Outbound (Sent)'),
@@ -111,6 +126,8 @@ class SocialDirectMessage(models.Model):
     media_url = models.URLField(max_length=500, blank=True, null=True, help_text="Optional media attachment URL")
     direction = models.CharField(max_length=10, choices=DIRECTION_CHOICES, default='outbound')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    scheduled_at = models.DateTimeField(blank=True, null=True, help_text="Future date/time to send this message. If None, sent immediately.")
+    sent_at = models.DateTimeField(blank=True, null=True, help_text="Timestamp when message was actually delivered to platform.")
     external_message_id = models.CharField(max_length=255, blank=True, null=True, help_text="Message ID returned by platform")
     conversation_id = models.CharField(max_length=255, blank=True, null=True, help_text="Conversation or Thread ID")
     error_message = models.TextField(blank=True, null=True)

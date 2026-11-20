@@ -23,7 +23,7 @@ This document covers installation, backend Django setup, model schemas, full RES
 
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
-| **`django-social-autoposter`** | **`0.3.0`** | Standalone Multi-Platform Social Auto-Poster & Direct Messaging | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, and send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn. |
+| **`django-social-autoposter`** | **`0.4.0`** | Standalone Multi-Platform Social Auto-Poster, Direct Messaging & Scheduler | Broadcast simultaneously to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn, and schedule future publications via built-in management command. |
 | **`django-drf-blog-api`** | **`0.3.2`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration. |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
@@ -482,36 +482,53 @@ LINKEDIN_ACCESS_TOKEN=AQX...
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/social/broadcast/` | `GET` | List past broadcast campaigns and logs. |
-| `/social/broadcast/` | `POST` | Compose and broadcast a post to all or selected platforms. |
+| `/social/broadcast/` | `GET` | List past and scheduled broadcast campaigns (`?status=scheduled`). |
+| `/social/broadcast/` | `POST` | Compose and broadcast a post immediately or schedule with `scheduled_at`. |
 | `/social/broadcast/<id>/` | `GET` | Detail of a specific broadcast with live external post URLs. |
+| `/social/broadcast/<id>/cancel/` | `POST` | Cancel a scheduled broadcast. |
+| `/social/broadcast/<id>/publish-now/` | `POST` | Force publish a scheduled broadcast immediately. |
+| `/social/broadcast/<id>/reschedule/` | `POST` | Update `scheduled_at` for a scheduled broadcast. |
 | `/social/logs/` | `GET` | Filter logs by `?platform=facebook&status=published`. |
 | `/social/configs/` | `GET`, `POST` | Manage DB platform credentials overrides. |
-| `/social/messages/send/` | `POST` | Send direct message on WhatsApp, Instagram, Messenger, X, or LinkedIn. |
-| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=delivered`). |
+| `/social/messages/send/` | `POST` | Send direct message immediately or schedule with `scheduled_at`. |
+| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=scheduled`). |
 | `/social/messages/<id>/` | `GET`, `DELETE` | View details or delete direct message record. |
+| `/social/messages/<id>/cancel/` | `POST` | Cancel a scheduled direct message. |
+| `/social/messages/<id>/send-now/` | `POST` | Force send a scheduled direct message immediately. |
+| `/social/messages/<id>/reschedule/` | `POST` | Update `scheduled_at` for a scheduled direct message. |
+| `/social/scheduled/` | `GET` | Unified overview of upcoming scheduled broadcasts and messages. |
+
+### ⏰ Scheduler Management Command (Cron / Docker)
+Run periodically via system crontab:
+```bash
+python manage.py process_scheduled_social_posts
+```
 
 ### 🐍 Python Service Usage in Any Django App
 ```python
+from datetime import timedelta
+from django.utils import timezone
 from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
-# 1. Multi-Platform Broadcast:
+# 1. Multi-Platform Broadcast (Immediate or Scheduled):
 broadcast = SocialBroadcastService.broadcast(
     title="Product Announcement",
     message="We are proud to introduce our latest product release.",
     link_url="https://example.com/products/1",
     image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
-    platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'], # or None for all enabled
+    platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
+    scheduled_at=timezone.now() + timedelta(days=2),  # Future schedule
     source_instance=product_instance  # Optional: attaches audit log via GenericForeignKey
 )
 
-# 2. Social Direct Messaging:
+# 2. Social Direct Messaging (Immediate or Scheduled):
 dm = SocialMessagingService.send_message(
     platform='whatsapp',
     recipient_id='+1234567890',
     message='Your order has been verified and processed.',
     media_url='https://example.com/receipt.pdf',
-    extra_params={'media_type': 'document'}
+    extra_params={'media_type': 'document'},
+    scheduled_at=timezone.now() + timedelta(hours=6)
 )
 ```
 

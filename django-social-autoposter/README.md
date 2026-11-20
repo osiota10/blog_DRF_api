@@ -1,8 +1,8 @@
 # django-social-autoposter
 
-A standalone, modular Django REST Framework package for broadcasting social media posts and sending direct private messages across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
+A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.3.0`**
+Current Version: **`0.4.0`**
 
 ---
 
@@ -15,16 +15,21 @@ Current Version: **`0.3.0`**
   * **Instagram Direct Messages** (text, media attachments)
   * **Twitter / X Direct Messages** (API v2 DMs with OAuth 1.0a or OAuth 2.0 User Context)
   * **LinkedIn Messaging** (API v2 messages with recipient member URNs)
+* **Built-in Post & DM Scheduling**:
+  * Schedule broadcasts and direct messages to be dispatched at any future date/time (`scheduled_at`).
+  * Process due posts and messages using a lightweight, built-in Django management command (`python manage.py process_scheduled_social_posts`).
+  * Manage scheduled posts via dedicated cancel, reschedule, and publish-now endpoints.
+  * No heavy external queue broker (Redis/RabbitMQ/Celery) required by default; runs easily with standard Linux cron, Docker schedulers, or Cloud job runners.
 * **Decoupled Architecture**: Can be used by any domain package (`django-drf-blog-api`, `django-drf-coy-apis`, `django-mkt-place-api`, or custom apps).
 * **Generic Model Attachment (`GenericForeignKey`)**: Attach social broadcast campaigns and logs to *any* model instance (e.g. `Post`, `Product`, `Event`, or standalone manual broadcasts).
-* **Direct REST API Endpoints**: Full API for both broadcasting (`POST /social/broadcast/`) and direct messaging (`POST /social/messages/send/`).
+* **Direct REST API Endpoints**: Full API for broadcasting, direct messaging, and schedule management.
 * **Non-Blocking Asynchronous Execution**: Dispatches broadcast HTTP network calls in background worker thread pools without slowing down web request-response times.
 * **Hybrid Credential Resolution**:
   * Prioritizes database overrides (`SocialPlatformConfig`).
   * Falls back to `.env` configuration via `django-environ` / `settings.py`.
 * **Execution Auditing & Delivery Tracking**:
   * `SocialPostLog`: Detailed broadcast logs recording live post URLs, platform post IDs, and error traces.
-  * `SocialDirectMessage`: Audit log tracking message status (`pending`, `delivered`, `failed`), external message IDs, and conversation IDs.
+  * `SocialDirectMessage`: Audit log tracking message status (`pending`, `scheduled`, `delivered`, `failed`, `cancelled`), external message IDs, and conversation IDs.
 
 ---
 
@@ -222,21 +227,79 @@ dm_fb = SocialMessagingService.send_message(
 )
 ```
 
+### 3. Scheduling Posts & Messages (Python)
+```python
+from datetime import timedelta
+from django.utils import timezone
+from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
+
+# Schedule a broadcast for tomorrow at 9:00 AM
+future_time = timezone.now() + timedelta(days=1)
+
+scheduled_broadcast = SocialBroadcastService.broadcast(
+    title="Special Announcement",
+    message="Big news coming up tomorrow!",
+    scheduled_at=future_time,
+    platforms=['facebook', 'twitter', 'linkedin']
+)
+print("Broadcast scheduled with ID:", scheduled_broadcast.id, "Status:", scheduled_broadcast.status)
+
+# Schedule a WhatsApp direct message for next week
+scheduled_dm = SocialMessagingService.send_message(
+    platform='whatsapp',
+    recipient_id='+15551234567',
+    message='This is your scheduled follow-up reminder.',
+    scheduled_at=timezone.now() + timedelta(days=7)
+)
+print("DM scheduled with ID:", scheduled_dm.id, "Status:", scheduled_dm.status)
+```
+
+---
+
+## ⏰ Background Scheduler Runner (Cron / Task Runner)
+
+To automatically dispatch scheduled broadcasts and direct messages when their `scheduled_at` timestamp arrives, run the built-in management command periodically:
+
+```bash
+# Process all due scheduled broadcasts and messages
+python manage.py process_scheduled_social_posts
+
+# Preview due items without executing (dry-run)
+python manage.py process_scheduled_social_posts --dry-run
+
+# Process only broadcasts or only messages
+python manage.py process_scheduled_social_posts --broadcasts-only
+python manage.py process_scheduled_social_posts --messages-only
+```
+
+### Linux Crontab Example (`crontab -e`)
+Run the processor every 5 minutes:
+```cron
+*/5 * * * * cd /path/to/project && /path/to/venv/bin/python manage.py process_scheduled_social_posts >> /var/log/social_scheduler.log 2>&1
+```
+
 ---
 
 ## 📡 REST API Sitemap
 
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/social/broadcast/` | `GET` | List past broadcast campaigns and per-platform results. |
-| `/social/broadcast/` | `POST` | Compose and dispatch a post to all or selected platforms at once. |
+| `/social/broadcast/` | `GET` | List past and scheduled broadcasts (`?status=scheduled`). |
+| `/social/broadcast/` | `POST` | Compose and dispatch a post immediately or schedule with `scheduled_at`. |
 | `/social/broadcast/<id>/` | `GET` | Retrieve details and status logs for a specific broadcast. |
+| `/social/broadcast/<id>/cancel/` | `POST` | Cancel a scheduled broadcast. |
+| `/social/broadcast/<id>/publish-now/` | `POST` | Force publish a scheduled broadcast immediately. |
+| `/social/broadcast/<id>/reschedule/` | `POST` | Update `scheduled_at` for a scheduled broadcast. |
 | `/social/configs/` | `GET`, `POST` | List or create database-backed platform credential overrides. |
 | `/social/configs/<id>/` | `GET`, `PUT`, `DELETE` | Edit or delete platform credentials. |
 | `/social/logs/` | `GET` | Search and filter post execution logs (`?platform=facebook&status=published`). |
-| `/social/messages/send/` | `POST` | Send a direct message to a user on WhatsApp, Instagram, FB Messenger, X, or LinkedIn. |
-| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=delivered`). |
+| `/social/messages/send/` | `POST` | Send a direct message immediately or schedule with `scheduled_at`. |
+| `/social/messages/` | `GET` | List logged direct messages (`?platform=whatsapp&status=scheduled`). |
 | `/social/messages/<id>/` | `GET`, `DELETE` | Retrieve delivery details or delete a direct message log. |
+| `/social/messages/<id>/cancel/` | `POST` | Cancel a scheduled direct message. |
+| `/social/messages/<id>/send-now/` | `POST` | Force send a scheduled direct message immediately. |
+| `/social/messages/<id>/reschedule/` | `POST` | Update `scheduled_at` for a scheduled direct message. |
+| `/social/scheduled/` | `GET` | Unified overview listing upcoming scheduled broadcasts and messages. |
 
 ---
 

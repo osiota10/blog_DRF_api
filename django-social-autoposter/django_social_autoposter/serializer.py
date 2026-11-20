@@ -82,6 +82,9 @@ class SocialBroadcastSerializer(serializers.ModelSerializer):
             'link_url',
             'image_url',
             'target_platforms',
+            'status',
+            'scheduled_at',
+            'published_at',
             'content_type',
             'object_id',
             'created_at',
@@ -101,6 +104,12 @@ class SocialBroadcastCreateSerializer(serializers.Serializer):
         default=None,
         help_text="Optional list of platforms: ['facebook', 'instagram', 'twitter', 'linkedin', 'threads', 'tiktok']. If omitted, posts to all enabled."
     )
+    scheduled_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Optional future datetime to schedule publishing. If omitted, publishes immediately."
+    )
 
 
 class SocialDirectMessageSerializer(serializers.ModelSerializer):
@@ -115,6 +124,8 @@ class SocialDirectMessageSerializer(serializers.ModelSerializer):
             'media_url',
             'direction',
             'status',
+            'scheduled_at',
+            'sent_at',
             'external_message_id',
             'conversation_id',
             'error_message',
@@ -127,6 +138,7 @@ class SocialDirectMessageSerializer(serializers.ModelSerializer):
             'id',
             'direction',
             'status',
+            'sent_at',
             'external_message_id',
             'conversation_id',
             'error_message',
@@ -165,6 +177,12 @@ class SendMessageRequestSerializer(serializers.Serializer):
         default=None,
         help_text="Optional custom sender ID or account ID."
     )
+    scheduled_at = serializers.DateTimeField(
+        required=False,
+        allow_null=True,
+        default=None,
+        help_text="Optional future datetime to schedule sending. If omitted, sends immediately."
+    )
     extra_params = serializers.DictField(
         required=False,
         default=dict,
@@ -177,3 +195,10 @@ class SendMessageRequestSerializer(serializers.Serializer):
         if not message.strip() and not media_url:
             raise serializers.ValidationError("Either 'message' or 'media_url' must be provided.")
         return attrs
+
+
+class RescheduleRequestSerializer(serializers.Serializer):
+    scheduled_at = serializers.DateTimeField(
+        required=True,
+        help_text="Future datetime to reschedule the broadcast or message."
+    )

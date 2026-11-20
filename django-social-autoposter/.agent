@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.3.0)
+# Agent & Frontend Integration Guide: `django-social-autoposter` (v0.4.0)
 
-A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, Threads, TikTok, X (Twitter), LinkedIn, and sending direct private messages across WhatsApp, Instagram, Facebook Messenger, X, and LinkedIn.
+A standalone Django REST Framework package for broadcasting social media posts at once to Facebook, Instagram, Threads, TikTok, X (Twitter), LinkedIn, sending direct private messages across WhatsApp, Instagram, Facebook Messenger, X, and LinkedIn, and scheduling publications.
 
 ---
 
@@ -147,3 +147,43 @@ Required tokens in `.env` or `SocialPlatformConfig`:
 ### 7. Retrieve Message Details
 * **Endpoint:** `GET /social/messages/<id>/`
 * **Delete Message Log:** `DELETE /social/messages/<id>/`
+
+---
+
+## ⏰ Schedule Management Endpoints
+
+### 8. Schedule a Broadcast
+Pass `"scheduled_at": "2026-11-25T10:00:00Z"` in `POST /social/broadcast/`.
+Returns status `"scheduled"`.
+
+### 9. Control Scheduled Broadcasts
+* **Cancel Scheduled Broadcast:** `POST /social/broadcast/<id>/cancel/`
+* **Publish Scheduled Broadcast Now:** `POST /social/broadcast/<id>/publish-now/`
+* **Reschedule Broadcast:** `POST /social/broadcast/<id>/reschedule/`
+  Payload: `{"scheduled_at": "2026-11-26T15:30:00Z"}`
+
+### 10. Schedule a Direct Message
+Pass `"scheduled_at": "2026-11-25T10:00:00Z"` in `POST /social/messages/send/`.
+Returns status `"scheduled"`.
+
+### 11. Control Scheduled Direct Messages
+* **Cancel Scheduled Message:** `POST /social/messages/<id>/cancel/`
+* **Send Scheduled Message Now:** `POST /social/messages/<id>/send-now/`
+* **Reschedule Message:** `POST /social/messages/<id>/reschedule/`
+  Payload: `{"scheduled_at": "2026-11-26T15:30:00Z"}`
+
+### 12. Upcoming Scheduled Overview
+* **Endpoint:** `GET /social/scheduled/`
+* **Response:**
+```json
+{
+  "scheduled_broadcasts": [ ... ],
+  "scheduled_messages": [ ... ]
+}
+```
+
+### 13. Background Task Runner (Management Command)
+Run via cron or task scheduler every 5 minutes:
+```bash
+python manage.py process_scheduled_social_posts
+```

@@ -1,12 +1,20 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+from django.core.management import call_command
+from datetime import timedelta
 from rest_framework.test import APIClient
 from rest_framework import status
 import unittest
 from unittest.mock import patch, MagicMock
 
 from .models import SocialPlatformConfig, SocialBroadcast, SocialPostLog, SocialDirectMessage
-from .services import SocialBroadcastService, SocialMessagingService, get_platform_credentials
+from .services import (
+    SocialBroadcastService,
+    SocialMessagingService,
+    SocialSchedulerService,
+    get_platform_credentials,
+)
 from .adapters import (
     FacebookAdapter, InstagramAdapter, TwitterAdapter, LinkedInAdapter,
     ThreadsAdapter, TikTokAdapter, WhatsAppAdapter
@@ -512,3 +520,220 @@ class SocialMessagingServiceTests(TestCase):
         self.assertEqual(dm.external_message_id, 'wamid.success.123')
         self.assertEqual(dm.direction, 'outbound')
         self.assertIsNone(dm.error_message)
+
+
+class SocialSchedulingTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_superuser(
+            email='schedulertester@example.com', password='password123'
+        )
+
+    def test_broadcast_scheduling_reschedule_and_cancel(self):
+        future_time = timezone.now() + timedelta(days=2)
+        broadcast = SocialBroadcastService.broadcast(
+            title="Scheduled Post",
+            message="This post is queued for next week.",
+            platforms=['facebook'],
+            scheduled_at=future_time
+        )
+
+        self.assertEqual(broadcast.status, 'scheduled')
+        self.assertEqual(broadcast.scheduled_at, future_time)
+        self.assertIsNone(broadcast.published_at)
+        self.assertEqual(broadcast.logs.count(), 0)
+
+        # Reschedule
+        new_time = timezone.now() + timedelta(days=5)
+        rescheduled = SocialBroadcastService.reschedule_broadcast(broadcast.id, new_time)
+        self.assertEqual(rescheduled.scheduled_at, new_time)
+        self.assertEqual(rescheduled.status, 'scheduled')
+
+        # Cancel
+        cancelled = SocialBroadcastService.cancel_broadcast(broadcast.id)
+        self.assertEqual(cancelled.status, 'cancelled')
+
+        # Cannot reschedule cancelled
+        with self.assertRaises(ValueError):
+            SocialBroadcastService.reschedule_broadcast(broadcast.id, timezone.now() + timedelta(days=6))
+
+    def test_direct_message_scheduling_reschedule_and_cancel(self):
+        future_time = timezone.now() + timedelta(hours=12)
+        dm = SocialMessagingService.send_message(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='Your appointment reminder',
+            scheduled_at=future_time
+        )
+
+        self.assertEqual(dm.status, 'scheduled')
+        self.assertEqual(dm.scheduled_at, future_time)
+        self.assertIsNone(dm.sent_at)
+
+        # Reschedule
+        new_time = timezone.now() + timedelta(days=1)
+        rescheduled = SocialMessagingService.reschedule_message(dm.id, new_time)
+        self.assertEqual(rescheduled.scheduled_at, new_time)
+        self.assertEqual(rescheduled.status, 'scheduled')
+
+        # Cancel
+        cancelled = SocialMessagingService.cancel_message(dm.id)
+        self.assertEqual(cancelled.status, 'cancelled')
+
+    @patch('django_social_autoposter.adapters.facebook.FacebookAdapter.publish')
+    @patch('django_social_autoposter.adapters.whatsapp.WhatsAppAdapter.send_direct_message')
+    def test_scheduler_process_due_schedules(self, mock_wa_dm, mock_fb_pub):
+        mock_fb_pub.return_value = {
+            'success': True,
+            'post_id': 'fb_pub_sched_1',
+            'post_url': 'https://facebook.com/fb_pub_sched_1',
+            'error': None,
+            'raw_response': {'id': 'fb_pub_sched_1'}
+        }
+        mock_wa_dm.return_value = {
+            'success': True,
+            'message_id': 'wamid.sched.999',
+            'conversation_id': None,
+            'error': None,
+            'raw_response': {'id': 'wamid.sched.999'}
+        }
+
+        SocialPlatformConfig.objects.create(
+            platform='facebook', is_enabled=True, access_token='fb_token_sched'
+        )
+        SocialPlatformConfig.objects.create(
+            platform='whatsapp', is_enabled=True, page_or_account_id='12345', access_token='wa_token_sched'
+        )
+
+        # Due broadcast (in the past)
+        due_broadcast = SocialBroadcast.objects.create(
+            title="Due Broadcast",
+            message="Publish me now",
+            target_platforms=['facebook'],
+            status='scheduled',
+            scheduled_at=timezone.now() - timedelta(minutes=5)
+        )
+        # Future broadcast (should remain scheduled)
+        future_broadcast = SocialBroadcast.objects.create(
+            title="Future Broadcast",
+            message="Do not publish yet",
+            target_platforms=['facebook'],
+            status='scheduled',
+            scheduled_at=timezone.now() + timedelta(days=1)
+        )
+
+        # Due message
+        due_dm = SocialDirectMessage.objects.create(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='Due reminder',
+            status='scheduled',
+            scheduled_at=timezone.now() - timedelta(minutes=10)
+        )
+        # Future message
+        future_dm = SocialDirectMessage.objects.create(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='Future reminder',
+            status='scheduled',
+            scheduled_at=timezone.now() + timedelta(days=2)
+        )
+
+        # Run scheduler
+        stats = SocialSchedulerService.process_due_schedules()
+        self.assertEqual(stats['broadcasts_due'], 1)
+        self.assertEqual(stats['broadcasts_processed'], 1)
+        self.assertEqual(stats['messages_due'], 1)
+        self.assertEqual(stats['messages_processed'], 1)
+
+        due_broadcast.refresh_from_db()
+        self.assertEqual(due_broadcast.status, 'completed')
+        self.assertIsNotNone(due_broadcast.published_at)
+
+        future_broadcast.refresh_from_db()
+        self.assertEqual(future_broadcast.status, 'scheduled')
+
+        due_dm.refresh_from_db()
+        self.assertEqual(due_dm.status, 'delivered')
+        self.assertIsNotNone(due_dm.sent_at)
+
+        future_dm.refresh_from_db()
+        self.assertEqual(future_dm.status, 'scheduled')
+
+    def test_management_command(self):
+        # Test dry-run and live run via call_command
+        call_command('process_scheduled_social_posts', dry_run=True)
+        call_command('process_scheduled_social_posts')
+
+
+class SocialSchedulingAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_superuser(
+            email='schedulingapi@example.com', password='password123'
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_schedule_and_control_broadcast_api(self):
+        future_str = (timezone.now() + timedelta(days=3)).isoformat()
+        res = self.client.post('/social/broadcast/', {
+            'title': 'API Scheduled Post',
+            'message': 'Scheduled via API',
+            'platforms': ['facebook'],
+            'scheduled_at': future_str
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['status'], 'scheduled')
+        broadcast_id = res.data['id']
+
+        # Reschedule API
+        new_time_str = (timezone.now() + timedelta(days=4)).isoformat()
+        res_reschedule = self.client.post(f'/social/broadcast/{broadcast_id}/reschedule/', {
+            'scheduled_at': new_time_str
+        }, format='json')
+        self.assertEqual(res_reschedule.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_reschedule.data['status'], 'scheduled')
+
+        # Cancel API
+        res_cancel = self.client.post(f'/social/broadcast/{broadcast_id}/cancel/')
+        self.assertEqual(res_cancel.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_cancel.data['status'], 'cancelled')
+
+    def test_schedule_and_control_message_api(self):
+        future_str = (timezone.now() + timedelta(days=2)).isoformat()
+        res = self.client.post('/social/messages/send/', {
+            'platform': 'whatsapp',
+            'recipient_id': '+15551234567',
+            'message': 'Scheduled WA message',
+            'scheduled_at': future_str
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['status'], 'scheduled')
+        dm_id = res.data['id']
+
+        # Cancel message API
+        res_cancel = self.client.post(f'/social/messages/{dm_id}/cancel/')
+        self.assertEqual(res_cancel.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_cancel.data['status'], 'cancelled')
+
+    def test_scheduled_overview_api(self):
+        # Create scheduled broadcast and message
+        SocialBroadcast.objects.create(
+            title="Overview Broadcast",
+            message="Check me out",
+            status='scheduled',
+            scheduled_at=timezone.now() + timedelta(days=1)
+        )
+        SocialDirectMessage.objects.create(
+            platform='whatsapp',
+            recipient_id='15551234567',
+            message='Overview DM',
+            status='scheduled',
+            scheduled_at=timezone.now() + timedelta(days=1)
+        )
+
+        res = self.client.get('/social/scheduled/')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res.data['scheduled_broadcasts']), 1)
+        self.assertEqual(len(res.data['scheduled_messages']), 1)

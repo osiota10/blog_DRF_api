@@ -18,8 +18,8 @@ class SocialPlatformConfigAdmin(admin.ModelAdmin):
 
 @admin.register(SocialBroadcast)
 class SocialBroadcastAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'message_snippet', 'target_platforms', 'created_at')
-    list_filter = ('created_at',)
+    list_display = ('id', 'title', 'status', 'scheduled_at', 'published_at', 'message_snippet', 'target_platforms', 'created_at')
+    list_filter = ('status', 'created_at', 'scheduled_at')
     search_fields = ('title', 'message')
     inlines = [SocialPostLogInline]
 
@@ -37,7 +37,7 @@ class SocialPostLogAdmin(admin.ModelAdmin):
 
 @admin.register(SocialDirectMessage)
 class SocialDirectMessageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'platform', 'recipient_id', 'direction', 'status', 'external_message_id', 'created_at')
-    list_filter = ('platform', 'status', 'direction', 'created_at')
+    list_display = ('id', 'platform', 'recipient_id', 'direction', 'status', 'scheduled_at', 'sent_at', 'external_message_id', 'created_at')
+    list_filter = ('platform', 'status', 'direction', 'scheduled_at', 'created_at')
     search_fields = ('recipient_id', 'sender_id', 'external_message_id', 'message')
 

@@ -1,6 +1,6 @@
-# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.2) & `django-social-autoposter` (v0.3.0)
+# Agent & Frontend Integration Guide: `django-drf-blog-api` (v0.3.2) & `django-social-autoposter` (v0.4.0)
 
-Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting & Direct Messaging** (Facebook, Instagram, WhatsApp Business, Threads, TikTok, X/Twitter, LinkedIn).
+Unified documentation for corporate blog management, company CMS, media library, and **Social Media Auto-Posting, Direct Messaging & Scheduling** (Facebook, Instagram, WhatsApp Business, Threads, TikTok, X/Twitter, LinkedIn).
 
 ---
 
@@ -165,3 +165,18 @@ Send private messages on WhatsApp, Facebook Messenger, Instagram Direct, X (Twit
 
 * **List Direct Messages:** `GET /social/messages/?platform=whatsapp&status=delivered`
 * **Detail Direct Message:** `GET /social/messages/{id}/`
+
+---
+
+## ⏰ Scheduled Posts & Messages
+
+Pass `"scheduled_at": "ISO_DATETIME"` when calling `POST /social/broadcast/` or `POST /social/messages/send/`.
+
+* **Overview of All Scheduled Items:** `GET /social/scheduled/`
+* **Cancel Scheduled Broadcast:** `POST /social/broadcast/{id}/cancel/`
+* **Force Publish Broadcast Now:** `POST /social/broadcast/{id}/publish-now/`
+* **Reschedule Broadcast:** `POST /social/broadcast/{id}/reschedule/` (payload: `{"scheduled_at": "..."}`)
+* **Cancel Scheduled Message:** `POST /social/messages/{id}/cancel/`
+* **Force Send Message Now:** `POST /social/messages/{id}/send-now/`
+* **Reschedule Message:** `POST /social/messages/{id}/reschedule/` (payload: `{"scheduled_at": "..."}`)
+* **Cron Command:** `python manage.py process_scheduled_social_posts`
