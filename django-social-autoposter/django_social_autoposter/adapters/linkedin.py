@@ -1,6 +1,8 @@
 import requests
 import logging
 import os
+import time
+import mimetypes
 from .base import BaseSocialAdapter
 
 logger = logging.getLogger(__name__)
@@ -17,7 +19,11 @@ class LinkedInAdapter(BaseSocialAdapter):
         # 1. Full HTTP/HTTPS URL
         if image_source.startswith(('http://', 'https://')):
             try:
-                res = requests.get(image_source, timeout=20)
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
+                }
+                res = requests.get(image_source, headers=headers, timeout=25)
                 if res.status_code == 200:
                     return res.content
                 logger.warning(f"Failed to fetch image from URL {image_source} ({res.status_code})")
@@ -52,10 +58,10 @@ class LinkedInAdapter(BaseSocialAdapter):
 
         return None
 
-    def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes) -> str:
+    def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes, filename: str = None) -> str:
         """
-        Registers an upload with LinkedIn Assets API, uploads the raw image bytes,
-        and returns the Digital Media Asset URN (e.g. urn:li:digitalmediaAsset:...).
+        Registers an upload with LinkedIn Assets API, uploads the raw image bytes via PUT,
+        verifies that the Digital Media Asset transitions to AVAILABLE, and returns the asset URN.
         """
         register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
         headers = {
@@ -72,7 +78,8 @@ class LinkedInAdapter(BaseSocialAdapter):
                         "relationshipType": "OWNER",
                         "identifier": "urn:li:userGeneratedContent"
                     }
-                ]
+                ],
+                "supportedUploadMechanism": ["SYNCHRONOUS_UPLOAD"]
             }
         }
 
@@ -97,10 +104,45 @@ class LinkedInAdapter(BaseSocialAdapter):
             if 'Authorization' not in upload_headers:
                 upload_headers['Authorization'] = f"Bearer {access_token}"
 
-            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=30)
+            # Detect content-type if possible
+            content_type = None
+            if filename:
+                content_type, _ = mimetypes.guess_type(filename)
+            if not content_type:
+                if image_bytes.startswith(b'\x89PNG'):
+                    content_type = 'image/png'
+                elif image_bytes.startswith(b'\xff\xd8'):
+                    content_type = 'image/jpeg'
+                elif image_bytes.startswith(b'GIF8'):
+                    content_type = 'image/gif'
+                elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:16]:
+                    content_type = 'image/webp'
+                else:
+                    content_type = 'application/octet-stream'
+
+            if 'Content-Type' not in upload_headers:
+                upload_headers['Content-Type'] = content_type
+
+            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=40)
             if upload_res.status_code not in [200, 201]:
                 logger.warning(f"LinkedIn image binary upload failed ({upload_res.status_code}): {upload_res.text}")
                 return None
+
+            # Verify asset status is AVAILABLE
+            asset_id = asset_urn.split(":")[-1]
+            status_url = f"https://api.linkedin.com/v2/assets/{asset_id}"
+
+            for _ in range(5):
+                check_res = requests.get(status_url, headers=headers, timeout=15)
+                if check_res.status_code == 200:
+                    asset_info = check_res.json()
+                    recipes = asset_info.get("recipes", [])
+                    if any(r.get("status") == "AVAILABLE" for r in recipes):
+                        return asset_urn
+                    if any(r.get("status") == "CLIENT_ERROR" for r in recipes):
+                        logger.warning(f"LinkedIn asset {asset_urn} failed processing: {asset_info}")
+                        return None
+                time.sleep(1)
 
             return asset_urn
         except Exception as e:
@@ -146,7 +188,7 @@ class LinkedInAdapter(BaseSocialAdapter):
         if broadcast.image_url:
             image_bytes = self._fetch_image_bytes(broadcast.image_url)
             if image_bytes:
-                asset_urn = self._upload_image(author_urn, access_token, image_bytes)
+                asset_urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(broadcast.image_url))
             else:
                 logger.warning(f"Could not retrieve image bytes from image_url: {broadcast.image_url}")
 

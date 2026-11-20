@@ -4,3 +4,7 @@ venv
 migrations
 __pycache__
 Extracted_models.md
+build/
+dist/
+*.egg-info/
+*.whl
