@@ -91,34 +91,69 @@ class InstagramPoster(BaseSocialPoster):
     def publish(self, post, article_url: str) -> dict:
         ig_account_id = self.creds.get('page_or_account_id')
         access_token = self.creds.get('access_token')
-        image_url = post.featured_image
+
+        media_list = []
+        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        if featured:
+            media_list.append(str(featured))
+        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
+        if gallery and isinstance(gallery, (list, tuple)):
+            for item in gallery:
+                u = getattr(item, 'url', None) or str(item)
+                if u and u not in media_list:
+                    media_list.append(u)
 
         if not ig_account_id or not access_token:
             return {'success': False, 'error': 'Missing Instagram Account ID or Access Token'}
-        if not image_url:
+        if not media_list:
             return {'success': False, 'error': 'Instagram requires a featured image URL.'}
 
         try:
-            # 1. Create Media Container
             container_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media"
             caption = f"{post.title}\n\n{post.excerpt or ''}\n\nLink in bio / {article_url}"
-            res1 = requests.post(container_url, data={
-                'image_url': image_url,
-                'caption': caption,
-                'access_token': access_token
-            }, timeout=15)
-            d1 = res1.json()
-            if res1.status_code != 200 or 'id' not in d1:
-                return {'success': False, 'error': f"Container creation failed: {d1}"}
 
-            container_id = d1['id']
+            # Carousel (2 to 10 images)
+            if len(media_list) > 1:
+                child_ids = []
+                for item_url in media_list[:10]:
+                    res_child = requests.post(container_url, data={
+                        'image_url': item_url,
+                        'is_carousel_item': 'true',
+                        'access_token': access_token
+                    }, timeout=20)
+                    d_child = res_child.json() if res_child.content else {}
+                    if res_child.status_code != 200 or 'id' not in d_child:
+                        return {'success': False, 'error': f"Carousel item container creation failed: {d_child}"}
+                    child_ids.append(str(d_child['id']))
 
-            # 2. Publish Container
+                res_parent = requests.post(container_url, data={
+                    'media_type': 'CAROUSEL',
+                    'children': ','.join(child_ids),
+                    'caption': caption,
+                    'access_token': access_token
+                }, timeout=20)
+                d_parent = res_parent.json() if res_parent.content else {}
+                if res_parent.status_code != 200 or 'id' not in d_parent:
+                    return {'success': False, 'error': f"Carousel parent container creation failed: {d_parent}"}
+                container_id = d_parent['id']
+            else:
+                # Single Image
+                res1 = requests.post(container_url, data={
+                    'image_url': media_list[0],
+                    'caption': caption,
+                    'access_token': access_token
+                }, timeout=15)
+                d1 = res1.json()
+                if res1.status_code != 200 or 'id' not in d1:
+                    return {'success': False, 'error': f"Container creation failed: {d1}"}
+                container_id = d1['id']
+
+            # Publish Container
             publish_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media_publish"
             res2 = requests.post(publish_url, data={
                 'creation_id': container_id,
                 'access_token': access_token
-            }, timeout=15)
+            }, timeout=20)
             d2 = res2.json()
             if res2.status_code == 200 and 'id' in d2:
                 return {'success': True, 'post_id': d2['id'], 'post_url': f"https://instagram.com/p/{d2['id']}"}
@@ -348,14 +383,17 @@ class LinkedInPoster(BaseSocialPoster):
             for _ in range(5):
                 check_res = requests.get(status_url, headers=headers, timeout=15)
                 if check_res.status_code == 200:
-                    asset_info = check_res.json()
+                    try:
+                        asset_info = check_res.json() if callable(getattr(check_res, 'json', None)) else {}
+                    except Exception:
+                        asset_info = {}
                     recipes = asset_info.get("recipes", [])
                     if any(r.get("status") == "AVAILABLE" for r in recipes):
                         return asset_urn
                     if any(r.get("status") == "CLIENT_ERROR" for r in recipes):
                         logger.warning(f"LinkedIn asset {asset_urn} failed processing: {asset_info}")
                         return None
-                time.sleep(1)
+                time.sleep(0.5)
 
             return asset_urn
         except Exception as e:
@@ -387,27 +425,46 @@ class LinkedInPoster(BaseSocialPoster):
         if post.excerpt:
             commentary_parts.append(post.excerpt)
 
-        # Check for featured image and upload to LinkedIn Assets if available
-        image_source = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
-        asset_urn = None
-        if image_source:
-            image_bytes = self._fetch_image_bytes(image_source)
-            if image_bytes:
-                asset_urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(image_source))
+        # Check for featured/gallery images and upload to LinkedIn Assets if available
+        media_list = []
+        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        if featured:
+            media_list.append(str(featured))
+        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
+        if gallery and isinstance(gallery, (list, tuple)):
+            for item in gallery:
+                u = getattr(item, 'url', None) or str(item)
+                if u and u not in media_list:
+                    media_list.append(u)
 
-        if asset_urn:
+        asset_urns = []
+        for img_source in media_list:
+            image_bytes = self._fetch_image_bytes(img_source)
+            if image_bytes:
+                urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(img_source))
+                if urn:
+                    asset_urns.append(urn)
+
+        if asset_urns:
             if article_url:
                 commentary_parts.append(f"Read full article: {article_url}")
             commentary = "\n\n".join(filter(None, commentary_parts))
 
+            media_items = [
+                {
+                    "status": "READY",
+                    "media": urn,
+                    "title": {
+                        "text": f"{post.title or 'Featured Image'} ({idx + 1})" if len(asset_urns) > 1 else (post.title or "Featured Image")
+                    }
+                }
+                for idx, urn in enumerate(asset_urns)
+            ]
+
             share_content = {
                 "shareCommentary": {"text": commentary},
                 "shareMediaCategory": "IMAGE",
-                "media": [{
-                    "status": "READY",
-                    "media": asset_urn,
-                    "title": {"text": post.title or "Featured Image"}
-                }]
+                "media": media_items
             }
         else:
             commentary = "\n\n".join(filter(None, commentary_parts))
@@ -457,26 +514,61 @@ class ThreadsPoster(BaseSocialPoster):
             suffix = f"...\n{article_url}"
             text = text[:max(0, 500 - len(suffix))].rstrip() + suffix
 
-        payload = {
-            'text': text,
-            'access_token': access_token,
-        }
-        if getattr(post, 'featured_image', None):
-            payload['media_type'] = 'IMAGE'
-            payload['image_url'] = post.featured_image
-        else:
-            payload['media_type'] = 'TEXT'
+        media_list = []
+        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        if featured:
+            media_list.append(str(featured))
+        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
+        if gallery and isinstance(gallery, (list, tuple)):
+            for item in gallery:
+                u = getattr(item, 'url', None) or str(item)
+                if u and u not in media_list:
+                    media_list.append(u)
 
         try:
-            # Step 1: Create Container
             container_url = f"https://graph.threads.net/v1.0/{user_id}/threads"
-            res1 = requests.post(container_url, data=payload, timeout=25)
-            d1 = res1.json() if res1.content else {}
-            if res1.status_code != 200 or 'id' not in d1:
-                err = d1.get('error', {}).get('message') if isinstance(d1.get('error'), dict) else str(d1)
-                return {'success': False, 'error': f"Threads container failed: {err}"}
 
-            creation_id = d1['id']
+            # Carousel (2 to 20 images)
+            if len(media_list) > 1:
+                child_ids = []
+                for item_url in media_list[:20]:
+                    res_c = requests.post(container_url, data={
+                        'media_type': 'IMAGE',
+                        'image_url': item_url,
+                        'is_carousel_item': 'true',
+                        'access_token': access_token
+                    }, timeout=25)
+                    d_c = res_c.json() if res_c.content else {}
+                    if res_c.status_code != 200 or 'id' not in d_c:
+                        err = d_c.get('error', {}).get('message') if isinstance(d_c.get('error'), dict) else str(d_c)
+                        return {'success': False, 'error': f"Threads carousel item failed: {err}"}
+                    child_ids.append(str(d_c['id']))
+
+                res_p = requests.post(container_url, data={
+                    'media_type': 'CAROUSEL',
+                    'children': ','.join(child_ids),
+                    'text': text,
+                    'access_token': access_token
+                }, timeout=25)
+                d_p = res_p.json() if res_p.content else {}
+                if res_p.status_code != 200 or 'id' not in d_p:
+                    err = d_p.get('error', {}).get('message') if isinstance(d_p.get('error'), dict) else str(d_p)
+                    return {'success': False, 'error': f"Threads carousel parent failed: {err}"}
+                creation_id = d_p['id']
+            else:
+                payload = {'text': text, 'access_token': access_token}
+                if len(media_list) == 1:
+                    payload['media_type'] = 'IMAGE'
+                    payload['image_url'] = media_list[0]
+                else:
+                    payload['media_type'] = 'TEXT'
+
+                res1 = requests.post(container_url, data=payload, timeout=25)
+                d1 = res1.json() if res1.content else {}
+                if res1.status_code != 200 or 'id' not in d1:
+                    err = d1.get('error', {}).get('message') if isinstance(d1.get('error'), dict) else str(d1)
+                    return {'success': False, 'error': f"Threads container failed: {err}"}
+                creation_id = d1['id']
 
             # Step 2: Publish Container
             publish_url = f"https://graph.threads.net/v1.0/{user_id}/threads_publish"
@@ -499,12 +591,22 @@ class TikTokPoster(BaseSocialPoster):
     def publish(self, post, article_url: str) -> dict:
         access_token = self.creds.get('access_token')
         account_id = self.creds.get('page_or_account_id')
-        media_url = getattr(post, 'featured_image', None)
 
         if not access_token:
             return {'success': False, 'error': 'Missing TikTok Access Token'}
 
-        if not media_url:
+        media_list = []
+        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        if featured:
+            media_list.append(str(featured))
+        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
+        if gallery and isinstance(gallery, (list, tuple)):
+            for item in gallery:
+                u = getattr(item, 'url', None) or str(item)
+                if u and u not in media_list:
+                    media_list.append(u)
+
+        if not media_list:
             return {'success': False, 'error': 'TikTok requires a featured image URL to create a post.'}
 
         headers = {
@@ -528,7 +630,7 @@ class TikTokPoster(BaseSocialPoster):
             "source_info": {
                 "source": "PULL_FROM_URL",
                 "photo_cover_index": 1,
-                "photo_images": [media_url]
+                "photo_images": media_list[:35]
             },
             "post_mode": "DIRECT_POST",
             "media_type": "PHOTO"

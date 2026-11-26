@@ -4,7 +4,7 @@ django-social-autoposter
 
 A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **0.4.0**
+Current Version: **0.5.0**
 
 Quick Start
 -----------

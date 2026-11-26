@@ -27,19 +27,20 @@ class TikTokAdapter(BaseSocialAdapter):
                 'raw_response': None
             }
 
-        media_url = broadcast.image_url
-        if not media_url:
+        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        if not media_list:
             return {
                 'success': False,
                 'post_id': None,
                 'post_url': None,
                 'error': (
-                    'TikTok Content Posting API requires a media URL (image_url). '
+                    'TikTok Content Posting API requires a media URL (image_url or media_urls). '
                     'Pure text posts are not supported by TikTok.'
                 ),
                 'raw_response': None
             }
 
+        media_url = media_list[0]
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json; charset=UTF-8"
@@ -88,7 +89,7 @@ class TikTokAdapter(BaseSocialAdapter):
                 "source_info": {
                     "source": "PULL_FROM_URL",
                     "photo_cover_index": 1,
-                    "photo_images": [media_url]
+                    "photo_images": media_list[:35]
                 },
                 "post_mode": "DIRECT_POST",
                 "media_type": "PHOTO"

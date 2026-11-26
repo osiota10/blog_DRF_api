@@ -60,6 +60,7 @@ class SocialBroadcast(models.Model):
     message = models.TextField(help_text="Primary broadcast message or caption")
     link_url = models.URLField(max_length=500, blank=True, null=True, help_text="Target article / page URL to share")
     image_url = models.URLField(max_length=500, blank=True, null=True, help_text="Image attachment URL")
+    media_urls = models.JSONField(default=list, blank=True, help_text="List of media/image URLs for carousel/multi-image posts")
     target_platforms = models.JSONField(default=list, blank=True, help_text="Platforms targeted for this broadcast")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='completed')
     scheduled_at = models.DateTimeField(blank=True, null=True, help_text="Future date/time to publish this broadcast. If None, published immediately.")
@@ -72,6 +73,17 @@ class SocialBroadcast(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def all_media_urls(self) -> list:
+        urls = []
+        if self.image_url:
+            urls.append(self.image_url)
+        if self.media_urls and isinstance(self.media_urls, list):
+            for u in self.media_urls:
+                if u and u not in urls:
+                    urls.append(u)
+        return urls
 
     def __str__(self):
         return f"Broadcast #{self.id} [{self.status}]: {self.title or self.message[:30]}"
@@ -135,6 +147,17 @@ class SocialDirectMessage(models.Model):
     extra_data = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def all_media_urls(self) -> list:
+        urls = []
+        if self.image_url:
+            urls.append(self.image_url)
+        if self.media_urls and isinstance(self.media_urls, list):
+            for u in self.media_urls:
+                if u and u not in urls:
+                    urls.append(u)
+        return urls
 
     def __str__(self):
         return f"[{self.platform.upper()}] DM to {self.recipient_id} ({self.status})"

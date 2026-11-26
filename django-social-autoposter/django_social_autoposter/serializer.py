@@ -72,6 +72,7 @@ class SocialPostLogSerializer(serializers.ModelSerializer):
 
 class SocialBroadcastSerializer(serializers.ModelSerializer):
     logs = SocialPostLogSerializer(many=True, read_only=True)
+    all_media_urls = serializers.ListField(child=serializers.URLField(), read_only=True)
 
     class Meta:
         model = SocialBroadcast
@@ -81,6 +82,8 @@ class SocialBroadcastSerializer(serializers.ModelSerializer):
             'message',
             'link_url',
             'image_url',
+            'media_urls',
+            'all_media_urls',
             'target_platforms',
             'status',
             'scheduled_at',
@@ -98,6 +101,12 @@ class SocialBroadcastCreateSerializer(serializers.Serializer):
     title = serializers.CharField(required=False, allow_blank=True, default="")
     link_url = serializers.URLField(required=False, allow_blank=True, default=None)
     image_url = serializers.URLField(required=False, allow_blank=True, default=None)
+    media_urls = serializers.ListField(
+        child=serializers.URLField(),
+        required=False,
+        default=list,
+        help_text="Optional list of image/media URLs for carousel/multi-image posts."
+    )
     platforms = serializers.ListField(
         child=serializers.CharField(),
         required=False,

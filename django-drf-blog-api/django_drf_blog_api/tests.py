@@ -5,7 +5,7 @@ from rest_framework import status
 from unittest.mock import patch
 from .models import MagazineSeries, Post, Category, SocialPlatformConfig, SocialPostLog
 from .signals import dispatch_social_posts
-from .social_posters import ThreadsPoster, TikTokPoster, LinkedInPoster
+from .social_posters import ThreadsPoster, TikTokPoster, LinkedInPoster, InstagramPoster
 
 User = get_user_model()
 
@@ -142,6 +142,31 @@ class SocialAutoPosterTests(TestCase):
         self.assertEqual(res_tt['post_id'], 'tt_pub_1')
         patch.stopall()
 
+    @patch('requests.post')
+    def test_instagram_poster_carousel(self, mock_post):
+        post = Post.objects.create(
+            title='Instagram Carousel News',
+            content='Multiple slides in blog post.',
+            featured_image_url='https://example.com/slide1.jpg',
+            category=self.category
+        )
+        post.gallery_images = ['https://example.com/slide2.jpg']
+
+        ig_poster = InstagramPoster({
+            'page_or_account_id': 'ig_act_99',
+            'access_token': 'ig_tok_99'
+        })
+
+        mock_c1 = type('Response', (), {'status_code': 200, 'content': b'{"id": "ig_c1"}', 'json': lambda s: {"id": "ig_c1"}})()
+        mock_c2 = type('Response', (), {'status_code': 200, 'content': b'{"id": "ig_c2"}', 'json': lambda s: {"id": "ig_c2"}})()
+        mock_parent = type('Response', (), {'status_code': 200, 'content': b'{"id": "ig_parent"}', 'json': lambda s: {"id": "ig_parent"}})()
+        mock_pub = type('Response', (), {'status_code': 200, 'content': b'{"id": "ig_pub_done"}', 'json': lambda s: {"id": "ig_pub_done"}})()
+        mock_post.side_effect = [mock_c1, mock_c2, mock_parent, mock_pub]
+
+        res = ig_poster.publish(post, 'https://example.com/blog/carousel')
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'ig_pub_done')
+
     @patch('requests.put')
     @patch('requests.get')
     @patch('requests.post')
@@ -158,8 +183,12 @@ class SocialAutoPosterTests(TestCase):
             'access_token': 'li_test_tok'
         })
 
-        # Mock image download
-        mock_get_res = type('Response', (), {'status_code': 200, 'content': b'image_data'})()
+        # Mock image download & asset status check
+        mock_get_res = type('Response', (), {
+            'status_code': 200,
+            'content': b'image_data',
+            'json': lambda s=None: {'recipes': [{'status': 'AVAILABLE'}]}
+        })()
         mock_get.return_value = mock_get_res
 
         # Mock registerUpload and ugcPosts

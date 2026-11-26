@@ -28,14 +28,45 @@ class FacebookAdapter(BaseSocialAdapter):
             message_parts.append(broadcast.message)
         message = "\n\n".join(filter(None, message_parts))
 
-        # If image is provided but no link, post to /photos; otherwise post to /feed
-        if broadcast.image_url and not broadcast.link_url:
+        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+
+        # Case 1: Multi-image carousel / album (2 or more images, without overriding link_url)
+        if len(media_list) > 1 and not broadcast.link_url:
+            photo_ids = []
+            for img_url in media_list:
+                photo_upload_url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
+                p_res = requests.post(photo_upload_url, data={
+                    'url': img_url,
+                    'published': 'false',
+                    'temporary': 'true',
+                    'access_token': access_token,
+                }, timeout=20)
+                p_data = p_res.json() if p_res.content else {}
+                if p_res.status_code == 200 and 'id' in p_data:
+                    photo_ids.append(p_data['id'])
+                else:
+                    logger.warning("Failed to upload unpublished Facebook photo: %s", p_data)
+
+            import json
+            url = f"https://graph.facebook.com/v19.0/{page_id}/feed"
+            payload = {
+                'message': message,
+                'access_token': access_token,
+            }
+            if photo_ids:
+                for i, pid in enumerate(photo_ids):
+                    payload[f'attached_media[{i}]'] = json.dumps({'media_fbid': pid})
+
+        # Case 2: Single image post (no link)
+        elif len(media_list) == 1 and not broadcast.link_url:
             url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
             payload = {
-                'url': broadcast.image_url,
+                'url': media_list[0],
                 'caption': message,
                 'access_token': access_token,
             }
+
+        # Case 3: Feed post with link or plain text
         else:
             url = f"https://graph.facebook.com/v19.0/{page_id}/feed"
             payload = {

@@ -2,13 +2,20 @@
 
 A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.4.0`**
+Current Version: **`0.5.0`**
 
 ---
 
 ## 🚀 Key Features
 
-* **Multi-Platform Broadcasting**: Publish content (title, message, link, image) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn simultaneously.
+* **Multi-Platform Broadcasting**: Publish content (title, message, link, image, or multiple carousel images) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn simultaneously.
+* **Carousel & Multi-Image Posts**:
+  * Attach multiple images via `media_urls` (or single `image_url`).
+  * **Instagram**: Native carousel container creation (`media_type="CAROUSEL"`) with up to 10 slides.
+  * **Facebook**: Multi-photo feed posts via unpublished photo attachments (`attached_media`).
+  * **Threads**: Multi-item carousel containers with up to 20 slides.
+  * **TikTok**: Native multi-photo slide carousel posts (`source_info.photo_images` up to 35 photos).
+  * **LinkedIn**: Multi-asset image posts via LinkedIn Assets API (`shareMediaCategory="IMAGE"`).
 * **Direct Messaging (DMs)**: Send direct messages to customers/users across:
   * **WhatsApp Business Cloud API** (text, images, documents, audio, video, templates)
   * **Facebook Messenger** (text, media attachments, Meta message tags)
@@ -182,7 +189,7 @@ broadcast = SocialBroadcastService.broadcast(
     title="Product Launch: Next-Gen Smartphone",
     message="We are thrilled to launch our new smartphone with cutting edge AI capabilities.",
     link_url="https://example.com/products/next-gen",
-    image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
+    image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg", # Or media_urls=["https://...", "https://..."] for carousels
     platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'], # or None for all enabled
     source_instance=my_product_instance # Optional: attaches audit log to any model instance
 )

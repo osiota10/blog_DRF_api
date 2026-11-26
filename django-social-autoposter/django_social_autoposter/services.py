@@ -152,6 +152,7 @@ class SocialBroadcastService:
         title: str = None,
         link_url: str = None,
         image_url: str = None,
+        media_urls: list = None,
         platforms: list = None,
         source_instance=None,
         async_dispatch: bool = True,
@@ -164,6 +165,7 @@ class SocialBroadcastService:
         :param title: Optional headline / title.
         :param link_url: Optional link / article URL.
         :param image_url: Optional image attachment URL.
+        :param media_urls: Optional list of image/media URLs for carousel/multi-image posts.
         :param platforms: List of platform keys (e.g. ['facebook', 'twitter']). Defaults to all enabled platforms.
         :param source_instance: Optional model instance (Post, Product, Event, etc.) to link via GenericForeignKey.
         :param async_dispatch: Whether to execute HTTP calls in background thread pool (default True).
@@ -206,6 +208,7 @@ class SocialBroadcastService:
             message=message,
             link_url=link_url,
             image_url=image_url,
+            media_urls=media_urls or [],
             target_platforms=target_platforms,
             content_type=content_type,
             object_id=object_id,

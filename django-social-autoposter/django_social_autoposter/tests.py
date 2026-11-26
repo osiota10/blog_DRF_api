@@ -291,6 +291,95 @@ class SocialAutoPosterModelAndServiceTests(TestCase):
         self.assertEqual(share_content_link['shareMediaCategory'], 'ARTICLE')
         self.assertEqual(share_content_link['media'][0]['originalUrl'], 'https://example.com/blog/article2')
 
+    @patch('requests.post')
+    def test_instagram_adapter_carousel(self, mock_post):
+        adapter = InstagramAdapter({'page_or_account_id': 'ig_123', 'access_token': 'tok_456'})
+        broadcast = SocialBroadcast.objects.create(
+            title="Carousel Post",
+            message="Swipe to see more",
+            media_urls=["https://example.com/slide1.jpg", "https://example.com/slide2.jpg"]
+        )
+
+        mock_child1 = MagicMock(status_code=200, content=b'{"id": "child_1"}')
+        mock_child1.json.return_value = {"id": "child_1"}
+
+        mock_child2 = MagicMock(status_code=200, content=b'{"id": "child_2"}')
+        mock_child2.json.return_value = {"id": "child_2"}
+
+        mock_parent = MagicMock(status_code=200, content=b'{"id": "parent_carousel"}')
+        mock_parent.json.return_value = {"id": "parent_carousel"}
+
+        mock_pub = MagicMock(status_code=200, content=b'{"id": "ig_post_999"}')
+        mock_pub.json.return_value = {"id": "ig_post_999"}
+
+        mock_post.side_effect = [mock_child1, mock_child2, mock_parent, mock_pub]
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'ig_post_999')
+
+        parent_call = mock_post.call_args_list[2]
+        self.assertEqual(parent_call[1]['data']['media_type'], 'CAROUSEL')
+        self.assertEqual(parent_call[1]['data']['children'], 'child_1,child_2')
+
+    @patch('requests.post')
+    def test_facebook_adapter_carousel(self, mock_post):
+        adapter = FacebookAdapter({'page_or_account_id': 'fb_123', 'access_token': 'tok_456'})
+        broadcast = SocialBroadcast.objects.create(
+            title="Album Post",
+            message="Check out our album",
+            media_urls=["https://example.com/pic1.jpg", "https://example.com/pic2.jpg"]
+        )
+
+        mock_p1 = MagicMock(status_code=200, content=b'{"id": "photo_1"}')
+        mock_p1.json.return_value = {"id": "photo_1"}
+
+        mock_p2 = MagicMock(status_code=200, content=b'{"id": "photo_2"}')
+        mock_p2.json.return_value = {"id": "photo_2"}
+
+        mock_feed = MagicMock(status_code=200, content=b'{"id": "feed_post_100"}')
+        mock_feed.json.return_value = {"id": "feed_post_100"}
+
+        mock_post.side_effect = [mock_p1, mock_p2, mock_feed]
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'feed_post_100')
+
+        feed_call = mock_post.call_args_list[2]
+        self.assertIn('attached_media[0]', feed_call[1]['data'])
+        self.assertIn('attached_media[1]', feed_call[1]['data'])
+
+    @patch('requests.post')
+    def test_threads_adapter_carousel(self, mock_post):
+        adapter = ThreadsAdapter({'page_or_account_id': 'th_123', 'access_token': 'tok_456'})
+        broadcast = SocialBroadcast.objects.create(
+            title="Threads Carousel",
+            message="Multiple slides on Threads",
+            media_urls=["https://example.com/t1.jpg", "https://example.com/t2.jpg"]
+        )
+
+        mock_c1 = MagicMock(status_code=200, content=b'{"id": "tc_1"}')
+        mock_c1.json.return_value = {"id": "tc_1"}
+
+        mock_c2 = MagicMock(status_code=200, content=b'{"id": "tc_2"}')
+        mock_c2.json.return_value = {"id": "tc_2"}
+
+        mock_parent = MagicMock(status_code=200, content=b'{"id": "th_parent"}')
+        mock_parent.json.return_value = {"id": "th_parent"}
+
+        mock_pub = MagicMock(status_code=200, content=b'{"id": "th_post_777"}')
+        mock_pub.json.return_value = {"id": "th_post_777"}
+
+        mock_post.side_effect = [mock_c1, mock_c2, mock_parent, mock_pub]
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'th_post_777')
+        parent_call = mock_post.call_args_list[2]
+        self.assertEqual(parent_call[1]['data']['media_type'], 'CAROUSEL')
+        self.assertEqual(parent_call[1]['data']['children'], 'tc_1,tc_2')
+
 
 
 class SocialAutoPosterAPITests(TestCase):
@@ -340,6 +429,27 @@ class SocialAutoPosterAPITests(TestCase):
         res_list = self.client.get('/social/broadcast/')
         self.assertEqual(res_list.status_code, status.HTTP_200_OK)
         self.assertEqual(len(res_list.data), 1)
+
+    @patch('django_social_autoposter.services.SocialBroadcastService.broadcast')
+    def test_social_broadcast_api_carousel_post(self, mock_broadcast):
+        fake_broadcast = SocialBroadcast.objects.create(
+            title="Carousel API Broadcast",
+            message="Swipe for slides",
+            media_urls=["https://example.com/s1.jpg", "https://example.com/s2.jpg"],
+            target_platforms=['instagram', 'facebook']
+        )
+        mock_broadcast.return_value = fake_broadcast
+
+        res = self.client.post('/social/broadcast/', {
+            'title': 'Carousel API Broadcast',
+            'message': 'Swipe for slides',
+            'media_urls': ['https://example.com/s1.jpg', 'https://example.com/s2.jpg'],
+            'platforms': ['instagram', 'facebook']
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(res.data['title'], 'Carousel API Broadcast')
+        self.assertEqual(len(res.data['media_urls']), 2)
+        self.assertEqual(len(res.data['all_media_urls']), 2)
 
     @patch('django_social_autoposter.services.SocialMessagingService.send_message')
     def test_social_message_send_api(self, mock_send_message):

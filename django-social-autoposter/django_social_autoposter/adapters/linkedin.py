@@ -135,14 +135,17 @@ class LinkedInAdapter(BaseSocialAdapter):
             for _ in range(5):
                 check_res = requests.get(status_url, headers=headers, timeout=15)
                 if check_res.status_code == 200:
-                    asset_info = check_res.json()
+                    try:
+                        asset_info = check_res.json() if callable(getattr(check_res, 'json', None)) else {}
+                    except Exception:
+                        asset_info = {}
                     recipes = asset_info.get("recipes", [])
                     if any(r.get("status") == "AVAILABLE" for r in recipes):
                         return asset_urn
                     if any(r.get("status") == "CLIENT_ERROR" for r in recipes):
                         logger.warning(f"LinkedIn asset {asset_urn} failed processing: {asset_info}")
                         return None
-                time.sleep(1)
+                time.sleep(0.5)
 
             return asset_urn
         except Exception as e:
@@ -183,29 +186,39 @@ class LinkedInAdapter(BaseSocialAdapter):
         if broadcast.message:
             commentary_parts.append(broadcast.message)
 
-        # 1. Attempt to upload image if image_url is provided
-        asset_urn = None
-        if broadcast.image_url:
-            image_bytes = self._fetch_image_bytes(broadcast.image_url)
+        # 1. Attempt to upload all images if image_url or media_urls provided
+        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        asset_urns = []
+        for img_src in media_list:
+            image_bytes = self._fetch_image_bytes(img_src)
             if image_bytes:
-                asset_urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(broadcast.image_url))
+                urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(img_src))
+                if urn:
+                    asset_urns.append(urn)
             else:
-                logger.warning(f"Could not retrieve image bytes from image_url: {broadcast.image_url}")
+                logger.warning(f"Could not retrieve image bytes from image URL/path: {img_src}")
 
-        # 2. Build share_content based on uploaded asset or link
-        if asset_urn:
+        # 2. Build share_content based on uploaded assets or link
+        if asset_urns:
             if broadcast.link_url:
                 commentary_parts.append(broadcast.link_url)
             commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"
 
+            media_items = [
+                {
+                    "status": "READY",
+                    "media": urn,
+                    "title": {
+                        "text": f"{broadcast.title or 'Post Image'} ({idx + 1})" if len(asset_urns) > 1 else (broadcast.title or "Post Image")
+                    }
+                }
+                for idx, urn in enumerate(asset_urns)
+            ]
+
             share_content = {
                 "shareCommentary": {"text": commentary},
                 "shareMediaCategory": "IMAGE",
-                "media": [{
-                    "status": "READY",
-                    "media": asset_urn,
-                    "title": {"text": broadcast.title or "Post Image"}
-                }]
+                "media": media_items
             }
         elif broadcast.link_url:
             commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"

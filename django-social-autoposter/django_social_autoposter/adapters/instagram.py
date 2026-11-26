@@ -21,12 +21,13 @@ class InstagramAdapter(BaseSocialAdapter):
                 'raw_response': None
             }
 
-        if not broadcast.image_url:
+        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        if not media_list:
             return {
                 'success': False,
                 'post_id': None,
                 'post_url': None,
-                'error': 'Instagram Business API requires an image attachment (image_url).',
+                'error': 'Instagram Business API requires an image attachment (image_url or media_urls).',
                 'raw_response': None
             }
 
@@ -40,26 +41,68 @@ class InstagramAdapter(BaseSocialAdapter):
         caption = "\n\n".join(filter(None, caption_parts))
 
         try:
-            # Step 1: Create Instagram Media Container
             container_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media"
-            res_container = requests.post(container_url, data={
-                'image_url': broadcast.image_url,
-                'caption': caption,
-                'access_token': access_token
-            }, timeout=25)
-            data_container = res_container.json()
 
-            if res_container.status_code != 200 or 'id' not in data_container:
-                err = data_container.get('error', {}).get('message') if isinstance(data_container.get('error'), dict) else str(data_container)
-                return {
-                    'success': False,
-                    'post_id': None,
-                    'post_url': None,
-                    'error': f"Instagram container creation failed: {err}",
-                    'raw_response': data_container
-                }
+            # Case A: Carousel / Multi-Image Post (2 to 10 images)
+            if len(media_list) > 1:
+                child_ids = []
+                for item_url in media_list[:10]:
+                    child_res = requests.post(container_url, data={
+                        'image_url': item_url,
+                        'is_carousel_item': 'true',
+                        'access_token': access_token
+                    }, timeout=25)
+                    child_data = child_res.json() if child_res.content else {}
+                    if child_res.status_code != 200 or 'id' not in child_data:
+                        err = child_data.get('error', {}).get('message') if isinstance(child_data.get('error'), dict) else str(child_data)
+                        return {
+                            'success': False,
+                            'post_id': None,
+                            'post_url': None,
+                            'error': f"Instagram carousel child container creation failed: {err}",
+                            'raw_response': child_data
+                        }
+                    child_ids.append(str(child_data['id']))
 
-            creation_id = data_container['id']
+                # Create parent CAROUSEL container
+                parent_res = requests.post(container_url, data={
+                    'media_type': 'CAROUSEL',
+                    'children': ','.join(child_ids),
+                    'caption': caption,
+                    'access_token': access_token
+                }, timeout=25)
+                parent_data = parent_res.json() if parent_res.content else {}
+                if parent_res.status_code != 200 or 'id' not in parent_data:
+                    err = parent_data.get('error', {}).get('message') if isinstance(parent_data.get('error'), dict) else str(parent_data)
+                    return {
+                        'success': False,
+                        'post_id': None,
+                        'post_url': None,
+                        'error': f"Instagram carousel parent container creation failed: {err}",
+                        'raw_response': parent_data
+                    }
+                creation_id = parent_data['id']
+
+            # Case B: Single Image Post
+            else:
+                res_container = requests.post(container_url, data={
+                    'image_url': media_list[0],
+                    'caption': caption,
+                    'access_token': access_token
+                }, timeout=25)
+                data_container = res_container.json() if res_container.content else {}
+
+                if res_container.status_code != 200 or 'id' not in data_container:
+                    err = data_container.get('error', {}).get('message') if isinstance(data_container.get('error'), dict) else str(data_container)
+                    return {
+                        'success': False,
+                        'post_id': None,
+                        'post_url': None,
+                        'error': f"Instagram container creation failed: {err}",
+                        'raw_response': data_container
+                    }
+
+                creation_id = data_container['id']
 
             # Step 2: Publish Media Container
             publish_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media_publish"

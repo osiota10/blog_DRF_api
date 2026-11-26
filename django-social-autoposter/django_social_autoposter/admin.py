@@ -18,10 +18,15 @@ class SocialPlatformConfigAdmin(admin.ModelAdmin):
 
 @admin.register(SocialBroadcast)
 class SocialBroadcastAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'status', 'scheduled_at', 'published_at', 'message_snippet', 'target_platforms', 'created_at')
+    list_display = ('id', 'title', 'status', 'scheduled_at', 'published_at', 'media_count', 'message_snippet', 'target_platforms', 'created_at')
     list_filter = ('status', 'created_at', 'scheduled_at')
     search_fields = ('title', 'message')
     inlines = [SocialPostLogInline]
+
+    def media_count(self, obj):
+        count = len(obj.all_media_urls)
+        return f"{count} media" if count else "Text only"
+    media_count.short_description = "Media"
 
     def message_snippet(self, obj):
         return obj.message[:50] + ("..." if len(obj.message) > 50 else "")

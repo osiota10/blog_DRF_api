@@ -25,6 +25,7 @@ Authorization: Bearer <jwt_access_token>
   "message": "We have just released our new platform features! Check it out now.",
   "link_url": "https://example.com/announcement",
   "image_url": "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+  "media_urls": ["https://res.cloudinary.com/demo/image/upload/sample1.jpg", "https://res.cloudinary.com/demo/image/upload/sample2.jpg"],
   "platforms": ["facebook", "instagram", "threads", "tiktok", "twitter", "linkedin"]
 }
 ```

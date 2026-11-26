@@ -43,6 +43,7 @@ class SocialBroadcastView(APIView):
             title=data.get('title'),
             link_url=data.get('link_url'),
             image_url=data.get('image_url'),
+            media_urls=data.get('media_urls'),
             platforms=data.get('platforms'),
             async_dispatch=True,
             scheduled_at=data.get('scheduled_at'),
