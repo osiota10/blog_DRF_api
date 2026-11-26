@@ -2,7 +2,7 @@
 
 A production-ready, reusable Django REST Framework blog and magazine API package supporting articles, magazine series editions, categories, tags, author profiles, backdated publications (`pub_date`), nested comments, generic content likes, **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn via `django-environ`), and Cloudinary / MediaAsset integration.
 
-Current Version: **`0.3.2`**
+Current Version: **`0.3.4`**
 
 ---
 
@@ -12,6 +12,8 @@ Current Version: **`0.3.2`**
 * **Magazine Series Editions**: Volume/Issue management, cover image (`MediaAsset`), editorial summaries, and lead stories headlines.
 * **Author Profiles**: One-to-one user account linking (`AUTH_USER_MODEL`), custom roles, and author biographies.
 * **🤖 Social Media Auto-Poster**: Automatically formats and posts newly published articles to **Facebook Pages**, **Instagram Business**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** asynchronously without slowing down HTTP request cycles.
+  * **Carousel / Multi-Image Support**: Automatically creates native multi-image carousels on Instagram, Facebook, Threads, TikTok, and LinkedIn whenever a post provides `gallery_images` or `media_urls` alongside `featured_image`.
+  * **LinkedIn Native Image Upload**: Uploads images via LinkedIn's 3-step Assets API (`registerUpload` -> `PUT` binary -> `ugcPosts` with `shareMediaCategory="IMAGE"`).
 * **Environment-Based Security (`django-environ`)**: Store social tokens securely in `.env` with optional Django Admin overrides (`SocialPlatformConfig`).
 * **Audit Logging**: Every social media post attempt is logged with status (`pending`, `published`, `failed`), external post URL, and error message in `SocialPostLog`.
 

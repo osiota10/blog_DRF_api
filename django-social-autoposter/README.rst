@@ -47,13 +47,13 @@ In your Django ``urls.py``:
 
 Supported Social Media Platforms
 --------------------------------
-- **Facebook Pages & Messenger**: Graph API v19.0 feed posting and direct customer messaging.
-- **Instagram Business & Direct**: Two-step container publishing and Instagram Direct messaging.
+- **Facebook Pages & Messenger**: Graph API v19.0 feed & multi-photo posts, plus direct customer messaging.
+- **Instagram Business & Direct**: Single-image and native multi-slide Carousel publishing (up to 10 slides) and Instagram Direct messaging.
 - **WhatsApp Business Cloud API**: Meta Graph API direct messaging with support for text, documents, images, audio, video, and templates.
-- **Threads (Meta)**: Two-step media container & publish API (supports text-only and images up to 500 characters).
-- **TikTok**: Content Posting API direct post (photo/video via public URL).
+- **Threads (Meta)**: Two-step media container & publish API (supports text-only, images, and Carousels up to 20 slides).
+- **TikTok**: Content Posting API direct post (single photo/video or multi-photo Carousel up to 35 slides via public URLs).
 - **X / Twitter**: API v2 ``POST /2/tweets`` and Direct Messaging via OAuth 1.0a / OAuth 2.0 User Context.
-- **LinkedIn**: UGC Post API v2 and Member Messaging API v2.
+- **LinkedIn**: UGC Post API v2 (3-step Assets API single & multi-image upload) and Member Messaging API v2.
 
 Python Service Usage
 --------------------
@@ -64,12 +64,16 @@ Python Service Usage
     from django.utils import timezone
     from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
-    # 1. Immediate or Scheduled Broadcast
+    # 1. Immediate or Scheduled Broadcast (Single Image or Multi-Image Carousel)
     broadcast = SocialBroadcastService.broadcast(
         title="Product Launch",
         message="Check out our new release!",
         link_url="https://example.com/product",
         image_url="https://example.com/image.jpg",
+        media_urls=[  # Optional: pass multiple public URLs for native carousels
+            "https://example.com/slide1.jpg",
+            "https://example.com/slide2.jpg",
+        ],
         platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
         scheduled_at=timezone.now() + timedelta(days=1),  # Optional future scheduling
         source_instance=my_instance

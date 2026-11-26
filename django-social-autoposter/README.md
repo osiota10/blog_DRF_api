@@ -197,6 +197,26 @@ broadcast = SocialBroadcastService.broadcast(
 print("Broadcast ID:", broadcast.id)
 ```
 
+### 1b. Carousel / Multi-Image Broadcast (Python)
+Pass `media_urls` (a list of public image URLs) to publish native multi-image carousels on **Instagram** (up to 10 slides), **Facebook** (multi-photo feed), **Threads** (up to 20 slides), **TikTok** (up to 35 slides), and **LinkedIn** (multi-asset UGC post). If both `image_url` and `media_urls` are provided, they are automatically combined and deduplicated via `broadcast.all_media_urls`.
+
+```python
+from django_social_autoposter.services import SocialBroadcastService
+
+carousel_broadcast = SocialBroadcastService.broadcast(
+    title="New Collection Lookbook",
+    message="Swipe through all highlights from our latest release!",
+    link_url="https://example.com/lookbook",
+    media_urls=[
+        "https://res.cloudinary.com/demo/image/upload/slide1.jpg",
+        "https://res.cloudinary.com/demo/image/upload/slide2.jpg",
+        "https://res.cloudinary.com/demo/image/upload/slide3.jpg",
+    ],
+    platforms=['instagram', 'facebook', 'threads', 'tiktok', 'linkedin'],
+    scheduled_at=future_time  # Optional: schedule the carousel for later
+)
+```
+
 ### 2. Social Direct Messaging
 ```python
 from django_social_autoposter.services import SocialMessagingService
@@ -346,8 +366,13 @@ async function publishToAllSocialMedia(userToken) {
     title: "Major Announcement!",
     message: "We just launched our new mobile application. Download today!",
     link_url: "https://yourwebsite.com/download",
-    image_url: "https://res.cloudinary.com/your-cloud/banner.jpg",
-    platforms: ["facebook", "twitter", "linkedin", "instagram"] // or omit to use all enabled
+    // Use image_url for a single image, or media_urls for multi-image carousels
+    media_urls: [
+      "https://res.cloudinary.com/your-cloud/slide-1.jpg",
+      "https://res.cloudinary.com/your-cloud/slide-2.jpg"
+    ],
+    platforms: ["facebook", "twitter", "linkedin", "instagram", "threads", "tiktok"], // or omit to use all enabled
+    // scheduled_at: "2026-12-01T10:00:00Z" // Optional ISO-8601 timestamp to schedule
   };
 
   const response = await axios.post('/social/broadcast/', payload, {

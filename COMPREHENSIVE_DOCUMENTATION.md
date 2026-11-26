@@ -516,12 +516,16 @@ from datetime import timedelta
 from django.utils import timezone
 from django_social_autoposter.services import SocialBroadcastService, SocialMessagingService
 
-# 1. Multi-Platform Broadcast (Immediate or Scheduled):
+# 1. Multi-Platform Broadcast (Immediate or Scheduled, Single or Carousel):
 broadcast = SocialBroadcastService.broadcast(
     title="Product Announcement",
     message="We are proud to introduce our latest product release.",
     link_url="https://example.com/products/1",
     image_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
+    media_urls=[  # Optional: pass multiple public URLs for native carousels (Instagram, Facebook, Threads, TikTok, LinkedIn)
+        "https://res.cloudinary.com/demo/image/upload/slide1.jpg",
+        "https://res.cloudinary.com/demo/image/upload/slide2.jpg",
+    ],
     platforms=['facebook', 'instagram', 'threads', 'tiktok', 'twitter', 'linkedin'],
     scheduled_at=timezone.now() + timedelta(days=2),  # Future schedule
     source_instance=product_instance  # Optional: attaches audit log via GenericForeignKey
