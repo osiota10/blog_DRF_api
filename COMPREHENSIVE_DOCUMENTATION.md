@@ -24,7 +24,7 @@ This document covers installation, backend Django setup, model schemas, full RES
 | Package | Latest PyPI Version | Primary Purpose | Key Features |
 |---|---|---|---|
 | **`django-social-autoposter`** | **`0.6.0`** | Standalone Multi-Platform Social Auto-Poster, Direct Messaging, Video/Carousel & Scheduler | Broadcast simultaneously (images, videos, and mixed image/video carousels) to Facebook, Instagram, Threads, TikTok, X (Twitter), and LinkedIn, send direct messages across WhatsApp, Instagram, Messenger, X, and LinkedIn, and schedule future publications via built-in management command. |
-| **`django-drf-blog-api`** | **`0.3.5`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration (with native LinkedIn image/video uploads and image/video carousel posting). |
+| **`django-drf-blog-api`** | **`0.3.6`** | Comprehensive Blog & Magazine Engine | Articles, Magazine Series, Categories, Tags, Author Profiles (role/bio), Comments, Likes, Backdated Posts (`pub_date`), Social Auto-Poster integration (with native LinkedIn image/video uploads and image/video carousel posting). |
 | **`django-drf-coy-apis`** | **`0.3.8`** | Corporate & Company CMS Endpoints | Company Info, Services, Products, Team Members, Testimonials, Core Values, Events, Stats, FAQs, Contact Forms, Newsletter Subscriptions. |
 | **`media_library`** | Included | Asset Storage & CKEditor Upload Handler | Centralized media asset manager linked to Cloudinary & local media storage. |
 

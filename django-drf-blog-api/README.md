@@ -2,7 +2,7 @@
 
 A production-ready, reusable Django REST Framework blog and magazine API package supporting articles, magazine series editions, categories, tags, author profiles, backdated publications (`pub_date`), nested comments, generic content likes, **Social Media Auto-Posting** (Facebook, Instagram, Threads, TikTok, X/Twitter, LinkedIn via `django-environ`), and Cloudinary / MediaAsset integration.
 
-Current Version: **`0.3.5`**
+Current Version: **`0.3.6`**
 
 ---
 
