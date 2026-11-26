@@ -9,9 +9,25 @@ class BaseSocialAdapter(ABC):
     Abstract Base Class for Social Media Platform Adapters.
     """
     platform_name = "base"
+    VIDEO_EXTENSIONS = ('.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.mpeg')
 
     def __init__(self, creds: dict):
         self.creds = creds or {}
+
+    def get_media_list(self, broadcast) -> list:
+        """Returns the ordered list of media URLs attached to a broadcast."""
+        return getattr(broadcast, 'all_media_urls', None) or (
+            [broadcast.image_url] if getattr(broadcast, 'image_url', None) else []
+        )
+
+    def is_video_url(self, url: str, extra_data: dict = None) -> bool:
+        """Returns True if the URL points to a video or extra_data forces VIDEO/REELS."""
+        if extra_data and str(extra_data.get('media_type', '')).upper() in ('VIDEO', 'REELS'):
+            return True
+        if not url:
+            return False
+        clean_path = str(url).lower().split('?', 1)[0].split('#', 1)[0]
+        return any(clean_path.endswith(ext) for ext in self.VIDEO_EXTENSIONS)
 
     @abstractmethod
     def publish(self, broadcast) -> dict:

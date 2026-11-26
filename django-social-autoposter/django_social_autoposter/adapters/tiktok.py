@@ -4,8 +4,6 @@ from .base import BaseSocialAdapter
 
 logger = logging.getLogger(__name__)
 
-VIDEO_EXTENSIONS = ('.mp4', '.mov', '.webm', '.m4v', '.avi', '.mkv')
-
 
 class TikTokAdapter(BaseSocialAdapter):
     platform_name = "tiktok"
@@ -27,7 +25,7 @@ class TikTokAdapter(BaseSocialAdapter):
                 'raw_response': None
             }
 
-        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        media_list = self.get_media_list(broadcast)
         if not media_list:
             return {
                 'success': False,
@@ -40,17 +38,13 @@ class TikTokAdapter(BaseSocialAdapter):
                 'raw_response': None
             }
 
-        media_url = media_list[0]
+        video_urls = [u for u in media_list if self.is_video_url(u, extra_data if len(media_list) == 1 else None)]
+        is_video = bool(video_urls)
+        media_url = video_urls[0] if is_video else media_list[0]
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json; charset=UTF-8"
         }
-
-        # Check if the media URL is a video or photo
-        is_video = (
-            extra_data.get('media_type') == 'VIDEO' or
-            any(media_url.lower().split('?')[0].endswith(ext) for ext in VIDEO_EXTENSIONS)
-        )
 
         privacy_level = extra_data.get('privacy_level', 'PUBLIC_TO_EVERYONE')
         title = (broadcast.title or broadcast.message or 'New Post')[:150]

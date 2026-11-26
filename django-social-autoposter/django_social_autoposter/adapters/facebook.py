@@ -28,24 +28,33 @@ class FacebookAdapter(BaseSocialAdapter):
             message_parts.append(broadcast.message)
         message = "\n\n".join(filter(None, message_parts))
 
-        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        extra_data = getattr(broadcast, 'extra_data', None) or {}
+        media_list = self.get_media_list(broadcast)
 
-        # Case 1: Multi-image carousel / album (2 or more images, without overriding link_url)
+        # Case 1: Multi-media carousel / album (2 or more images/videos, without overriding link_url)
         if len(media_list) > 1 and not broadcast.link_url:
-            photo_ids = []
-            for img_url in media_list:
-                photo_upload_url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
-                p_res = requests.post(photo_upload_url, data={
-                    'url': img_url,
-                    'published': 'false',
-                    'temporary': 'true',
-                    'access_token': access_token,
-                }, timeout=20)
-                p_data = p_res.json() if p_res.content else {}
-                if p_res.status_code == 200 and 'id' in p_data:
-                    photo_ids.append(p_data['id'])
+            attached_ids = []
+            for item_url in media_list:
+                if self.is_video_url(item_url):
+                    vid_upload_url = f"https://graph.facebook.com/v19.0/{page_id}/videos"
+                    m_res = requests.post(vid_upload_url, data={
+                        'file_url': item_url,
+                        'published': 'false',
+                        'access_token': access_token,
+                    }, timeout=30)
                 else:
-                    logger.warning("Failed to upload unpublished Facebook photo: %s", p_data)
+                    photo_upload_url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
+                    m_res = requests.post(photo_upload_url, data={
+                        'url': item_url,
+                        'published': 'false',
+                        'temporary': 'true',
+                        'access_token': access_token,
+                    }, timeout=20)
+                m_data = m_res.json() if m_res.content else {}
+                if m_res.status_code == 200 and 'id' in m_data:
+                    attached_ids.append(m_data['id'])
+                else:
+                    logger.warning("Failed to upload unpublished Facebook media: %s", m_data)
 
             import json
             url = f"https://graph.facebook.com/v19.0/{page_id}/feed"
@@ -53,18 +62,29 @@ class FacebookAdapter(BaseSocialAdapter):
                 'message': message,
                 'access_token': access_token,
             }
-            if photo_ids:
-                for i, pid in enumerate(photo_ids):
-                    payload[f'attached_media[{i}]'] = json.dumps({'media_fbid': pid})
+            if attached_ids:
+                for i, mid in enumerate(attached_ids):
+                    payload[f'attached_media[{i}]'] = json.dumps({'media_fbid': mid})
 
-        # Case 2: Single image post (no link)
+        # Case 2: Single media post (video or photo, no link)
         elif len(media_list) == 1 and not broadcast.link_url:
-            url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
-            payload = {
-                'url': media_list[0],
-                'caption': message,
-                'access_token': access_token,
-            }
+            single_url = media_list[0]
+            if self.is_video_url(single_url, extra_data):
+                url = f"https://graph.facebook.com/v19.0/{page_id}/videos"
+                payload = {
+                    'file_url': single_url,
+                    'description': message,
+                    'access_token': access_token,
+                }
+                if broadcast.title:
+                    payload['title'] = broadcast.title[:255]
+            else:
+                url = f"https://graph.facebook.com/v19.0/{page_id}/photos"
+                payload = {
+                    'url': single_url,
+                    'caption': message,
+                    'access_token': access_token,
+                }
 
         # Case 3: Feed post with link or plain text
         else:

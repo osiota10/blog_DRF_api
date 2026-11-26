@@ -227,3 +227,38 @@ class SocialAutoPosterTests(TestCase):
         share_content = payload['specificContent']['com.linkedin.ugc.ShareContent']
         self.assertEqual(share_content['shareMediaCategory'], 'IMAGE')
         self.assertEqual(share_content['media'][0]['media'], 'urn:li:digitalmediaAsset:li_img_123')
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_instagram_poster_video_carousel(self, mock_post, mock_get):
+        post_mix = Post.objects.create(
+            title='Video + Image Carousel',
+            excerpt='Mixed media post.',
+            featured_image_url='https://example.com/cover.jpg',
+            category=self.category
+        )
+        post_mix.video_url = 'https://example.com/reel.mp4'
+
+        ig_poster = InstagramPoster({
+            'page_or_account_id': 'ig_999',
+            'access_token': 'ig_tok'
+        })
+
+        mock_get_res = type('Response', (), {
+            'status_code': 200,
+            'content': b'{"status_code": "FINISHED"}',
+            'json': lambda s=None: {'status_code': 'FINISHED'}
+        })()
+        mock_get.return_value = mock_get_res
+
+        r_c1 = type('Response', (), {'status_code': 200, 'content': b'{"id": "c1"}', 'json': lambda s=None: {'id': 'c1'}})()
+        r_c2 = type('Response', (), {'status_code': 200, 'content': b'{"id": "c2"}', 'json': lambda s=None: {'id': 'c2'}})()
+        r_p = type('Response', (), {'status_code': 200, 'content': b'{"id": "p1"}', 'json': lambda s=None: {'id': 'p1'}})()
+        r_pub = type('Response', (), {'status_code': 200, 'content': b'{"id": "ig_post_1"}', 'json': lambda s=None: {'id': 'ig_post_1'}})()
+        mock_post.side_effect = [r_c1, r_c2, r_p, r_pub]
+
+        res = ig_poster.publish(post_mix, 'https://example.com/blog/video-image')
+        self.assertTrue(res['success'])
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['media_type'], 'VIDEO')
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['video_url'], 'https://example.com/reel.mp4')
+        self.assertEqual(mock_post.call_args_list[2][1]['data']['media_type'], 'CAROUSEL')

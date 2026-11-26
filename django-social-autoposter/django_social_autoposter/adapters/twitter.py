@@ -1,3 +1,5 @@
+import time
+import mimetypes
 import requests
 import logging
 from .base import BaseSocialAdapter
@@ -7,6 +9,93 @@ logger = logging.getLogger(__name__)
 
 class TwitterAdapter(BaseSocialAdapter):
     platform_name = "twitter"
+
+    def _upload_media(self, media_url: str, auth, auth_headers: dict, is_video: bool = False):
+        """
+        Downloads media from media_url and uploads it to X/Twitter chunked media upload endpoint.
+        Returns media_id string or None on failure.
+        """
+        upload_url = "https://upload.twitter.com/1.1/media/upload.json"
+        req_headers = {k: v for k, v in (auth_headers or {}).items() if k.lower() == 'authorization'}
+        try:
+            dl_res = requests.get(media_url, timeout=30)
+            if dl_res.status_code != 200 or not getattr(dl_res, 'content', None):
+                logger.warning("Twitter media download failed (%s): %s", dl_res.status_code, media_url)
+                return None
+            media_bytes = dl_res.content
+            guessed_type, _ = mimetypes.guess_type(str(media_url).split('?', 1)[0])
+            media_type = guessed_type or ('video/mp4' if is_video else 'image/jpeg')
+            media_category = 'tweet_video' if is_video else 'tweet_image'
+
+            init_res = requests.post(
+                upload_url,
+                data={
+                    'command': 'INIT',
+                    'total_bytes': len(media_bytes),
+                    'media_type': media_type,
+                    'media_category': media_category,
+                },
+                headers=req_headers,
+                auth=auth,
+                timeout=20,
+            )
+            init_data = init_res.json() if getattr(init_res, 'content', None) else {}
+            media_id = init_data.get('media_id_string') or (str(init_data['media_id']) if 'media_id' in init_data else None)
+            if init_res.status_code not in (200, 201, 202) or not media_id:
+                logger.warning("Twitter media INIT failed: %s", init_data)
+                return None
+
+            chunk_size = 4 * 1024 * 1024
+            for idx, offset in enumerate(range(0, len(media_bytes), chunk_size)):
+                chunk = media_bytes[offset:offset + chunk_size]
+                app_res = requests.post(
+                    upload_url,
+                    data={'command': 'APPEND', 'media_id': media_id, 'segment_index': idx},
+                    files={'media': chunk},
+                    headers=req_headers,
+                    auth=auth,
+                    timeout=60,
+                )
+                if app_res.status_code not in (200, 201, 202, 204):
+                    logger.warning("Twitter media APPEND failed (%s): %s", app_res.status_code, app_res.text)
+                    return None
+
+            fin_res = requests.post(
+                upload_url,
+                data={'command': 'FINALIZE', 'media_id': media_id},
+                headers=req_headers,
+                auth=auth,
+                timeout=20,
+            )
+            fin_data = fin_res.json() if getattr(fin_res, 'content', None) else {}
+            if fin_res.status_code not in (200, 201):
+                logger.warning("Twitter media FINALIZE failed: %s", fin_data)
+                return None
+
+            proc_info = fin_data.get('processing_info')
+            attempts = 0
+            while proc_info and proc_info.get('state') in ('pending', 'in_progress') and attempts < 10:
+                wait_secs = min(int(proc_info.get('check_after_secs', 2)), 5)
+                time.sleep(wait_secs)
+                status_res = requests.get(
+                    upload_url,
+                    params={'command': 'STATUS', 'media_id': media_id},
+                    headers=req_headers,
+                    auth=auth,
+                    timeout=15,
+                )
+                status_data = status_res.json() if getattr(status_res, 'content', None) else {}
+                proc_info = status_data.get('processing_info')
+                attempts += 1
+
+            if proc_info and proc_info.get('state') == 'failed':
+                logger.warning("Twitter video processing failed: %s", proc_info)
+                return None
+
+            return str(media_id)
+        except Exception as e:
+            logger.exception("Error uploading media to X / Twitter: %s", e)
+            return None
 
     def publish(self, broadcast) -> dict:
         api_key = self.creds.get('api_key')
@@ -87,6 +176,18 @@ class TwitterAdapter(BaseSocialAdapter):
         url = "https://api.twitter.com/2/tweets"
         text = self.build_text_message(broadcast, max_length=280)
         json_payload = {"text": text}
+
+        extra_data = getattr(broadcast, 'extra_data', None) or {}
+        media_list = self.get_media_list(broadcast)
+        if media_list:
+            media_ids = []
+            for item_url in media_list[:4]:
+                is_vid = self.is_video_url(item_url, extra_data if len(media_list) == 1 else None)
+                mid = self._upload_media(item_url, auth=auth, auth_headers=headers, is_video=is_vid)
+                if mid:
+                    media_ids.append(mid)
+            if media_ids:
+                json_payload["media"] = {"media_ids": media_ids}
 
         try:
             res = requests.post(url, json=json_payload, headers=headers, auth=auth, timeout=20)

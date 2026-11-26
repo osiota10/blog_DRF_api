@@ -2,20 +2,21 @@
 
 A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **`0.5.0`**
+Current Version: **`0.6.0`**
 
 ---
 
 ## 🚀 Key Features
 
 * **Multi-Platform Broadcasting**: Publish content (title, message, link, image, or multiple carousel images) to Facebook, Instagram, Threads, TikTok, Twitter, and LinkedIn simultaneously.
-* **Carousel & Multi-Image Posts**:
-  * Attach multiple images via `media_urls` (or single `image_url`).
-  * **Instagram**: Native carousel container creation (`media_type="CAROUSEL"`) with up to 10 slides.
-  * **Facebook**: Multi-photo feed posts via unpublished photo attachments (`attached_media`).
-  * **Threads**: Multi-item carousel containers with up to 20 slides.
-  * **TikTok**: Native multi-photo slide carousel posts (`source_info.photo_images` up to 35 photos).
-  * **LinkedIn**: Multi-asset image posts via LinkedIn Assets API (`shareMediaCategory="IMAGE"`).
+* **Carousel, Video & Multi-Media Posts**:
+  * Attach images or videos (`.mp4`, `.mov`, `.webm`, etc.) via `image_url` or `media_urls` (or mixed image + video carousels).
+  * **Instagram**: Native Reels (`media_type="REELS"`), image carousels, and mixed image/video carousels (up to 10 slides) with automatic container status polling.
+  * **Facebook**: Single Page videos (`/{page_id}/videos`), multi-photo feeds, and mixed photo/video carousels (`attached_media`).
+  * **Threads**: Single videos (`media_type="VIDEO"`), image carousels, and mixed image/video carousels (up to 20 slides) with container status polling.
+  * **TikTok**: Native video uploads (`PULL_FROM_URL` via `/v2/post/publish/video/init/`) and multi-photo slide carousels (`source_info.photo_images` up to 35 photos).
+  * **LinkedIn**: Single & multi-asset image posts (`feedshare-image`) and video posts (`feedshare-video`) via LinkedIn Assets API.
+  * **X / Twitter**: Chunked media upload (`media/upload.json` for up to 4 images or `tweet_video` with processing status polling) attached to `POST /2/tweets`.
 * **Direct Messaging (DMs)**: Send direct messages to customers/users across:
   * **WhatsApp Business Cloud API** (text, images, documents, audio, video, templates)
   * **Facebook Messenger** (text, media attachments, Meta message tags)

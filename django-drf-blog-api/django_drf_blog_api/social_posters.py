@@ -50,8 +50,55 @@ def get_platform_credentials(platform_name: str) -> dict:
 
 
 class BaseSocialPoster(ABC):
+    VIDEO_EXTENSIONS = ('.mp4', '.mov', '.m4v', '.webm', '.avi', '.mkv', '.mpeg')
+
     def __init__(self, creds: dict):
         self.creds = creds
+
+    def is_video_url(self, url: str) -> bool:
+        """Returns True if the URL ends with a known video extension."""
+        if not url:
+            return False
+        clean_path = str(url).lower().split('?', 1)[0].split('#', 1)[0]
+        return any(clean_path.endswith(ext) for ext in self.VIDEO_EXTENSIONS)
+
+    def get_post_media(self, post) -> list:
+        """Collects ordered, deduplicated media URLs (featured image, video_url, gallery/media_urls)."""
+        media_list = []
+        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
+        if featured:
+            media_list.append(str(featured))
+        video_url = getattr(post, 'video_url', None)
+        if video_url and str(video_url) not in media_list:
+            media_list.append(str(video_url))
+        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
+        if gallery and isinstance(gallery, (list, tuple)):
+            for item in gallery:
+                u = getattr(item, 'url', None) or str(item)
+                if u and u not in media_list:
+                    media_list.append(u)
+        return media_list
+
+    def _wait_for_meta_container(self, status_url: str, access_token: str, status_field: str = 'status_code', max_attempts: int = 10, sleep_seconds: float = 2.0):
+        """Polls Meta/Threads container status until FINISHED/PUBLISHED."""
+        for attempt in range(max_attempts):
+            try:
+                res = requests.get(
+                    status_url,
+                    params={'fields': status_field, 'access_token': access_token},
+                    timeout=15,
+                )
+                data = res.json() if getattr(res, 'content', None) and callable(getattr(res, 'json', None)) else {}
+                val = str(data.get(status_field, '')).upper()
+                if val in ('FINISHED', 'PUBLISHED', ''):
+                    return True, None
+                if val in ('ERROR', 'EXPIRED'):
+                    return False, f"Video container processing failed with status {val}"
+            except Exception as e:
+                logger.warning("Meta container status poll error: %s", e)
+            if attempt < max_attempts - 1:
+                time.sleep(sleep_seconds)
+        return False, "Video container processing timed out."
 
     @abstractmethod
     def publish(self, post, article_url: str) -> dict:
@@ -92,39 +139,44 @@ class InstagramPoster(BaseSocialPoster):
         ig_account_id = self.creds.get('page_or_account_id')
         access_token = self.creds.get('access_token')
 
-        media_list = []
-        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
-        if featured:
-            media_list.append(str(featured))
-        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
-        if gallery and isinstance(gallery, (list, tuple)):
-            for item in gallery:
-                u = getattr(item, 'url', None) or str(item)
-                if u and u not in media_list:
-                    media_list.append(u)
+        media_list = self.get_post_media(post)
 
         if not ig_account_id or not access_token:
             return {'success': False, 'error': 'Missing Instagram Account ID or Access Token'}
         if not media_list:
-            return {'success': False, 'error': 'Instagram requires a featured image URL.'}
+            return {'success': False, 'error': 'Instagram requires a featured image or video URL.'}
 
         try:
             container_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media"
             caption = f"{post.title}\n\n{post.excerpt or ''}\n\nLink in bio / {article_url}"
 
-            # Carousel (2 to 10 images)
+            # Carousel (2 to 10 images/videos)
             if len(media_list) > 1:
                 child_ids = []
                 for item_url in media_list[:10]:
-                    res_child = requests.post(container_url, data={
-                        'image_url': item_url,
+                    is_vid = self.is_video_url(item_url)
+                    child_payload = {
                         'is_carousel_item': 'true',
                         'access_token': access_token
-                    }, timeout=20)
+                    }
+                    if is_vid:
+                        child_payload['media_type'] = 'VIDEO'
+                        child_payload['video_url'] = item_url
+                    else:
+                        child_payload['image_url'] = item_url
+
+                    res_child = requests.post(container_url, data=child_payload, timeout=20)
                     d_child = res_child.json() if res_child.content else {}
                     if res_child.status_code != 200 or 'id' not in d_child:
                         return {'success': False, 'error': f"Carousel item container creation failed: {d_child}"}
-                    child_ids.append(str(d_child['id']))
+                    child_id = str(d_child['id'])
+                    if is_vid:
+                        ready, poll_err = self._wait_for_meta_container(
+                            f"https://graph.facebook.com/v19.0/{child_id}", access_token, 'status_code'
+                        )
+                        if not ready:
+                            return {'success': False, 'error': poll_err}
+                    child_ids.append(child_id)
 
                 res_parent = requests.post(container_url, data={
                     'media_type': 'CAROUSEL',
@@ -137,16 +189,28 @@ class InstagramPoster(BaseSocialPoster):
                     return {'success': False, 'error': f"Carousel parent container creation failed: {d_parent}"}
                 container_id = d_parent['id']
             else:
-                # Single Image
-                res1 = requests.post(container_url, data={
-                    'image_url': media_list[0],
-                    'caption': caption,
-                    'access_token': access_token
-                }, timeout=15)
+                # Single Video (Reels) or Single Image
+                single_url = media_list[0]
+                is_vid = self.is_video_url(single_url)
+                c_payload = {'caption': caption, 'access_token': access_token}
+                if is_vid:
+                    c_payload['media_type'] = 'REELS'
+                    c_payload['video_url'] = single_url
+                    c_payload['share_to_feed'] = 'true'
+                else:
+                    c_payload['image_url'] = single_url
+
+                res1 = requests.post(container_url, data=c_payload, timeout=20)
                 d1 = res1.json()
                 if res1.status_code != 200 or 'id' not in d1:
                     return {'success': False, 'error': f"Container creation failed: {d1}"}
                 container_id = d1['id']
+                if is_vid:
+                    ready, poll_err = self._wait_for_meta_container(
+                        f"https://graph.facebook.com/v19.0/{container_id}", access_token, 'status_code'
+                    )
+                    if not ready:
+                        return {'success': False, 'error': poll_err}
 
             # Publish Container
             publish_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media_publish"
@@ -307,8 +371,25 @@ class LinkedInPoster(BaseSocialPoster):
         return None
 
     def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes, filename: str = None) -> str:
+        """Backward-compatible helper for uploading an image asset to LinkedIn."""
+        return self._upload_asset(
+            author_urn=author_urn,
+            access_token=access_token,
+            media_bytes=image_bytes,
+            filename=filename,
+            recipe="urn:li:digitalmediaRecipe:feedshare-image"
+        )
+
+    def _upload_asset(
+        self,
+        author_urn: str,
+        access_token: str,
+        media_bytes: bytes,
+        filename: str = None,
+        recipe: str = "urn:li:digitalmediaRecipe:feedshare-image",
+    ) -> str:
         """
-        Registers an upload with LinkedIn Assets API, uploads the raw image bytes via PUT,
+        Registers an upload with LinkedIn Assets API, uploads raw media bytes via PUT,
         verifies that the Digital Media Asset transitions to AVAILABLE, and returns the asset URN.
         """
         register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
@@ -319,7 +400,7 @@ class LinkedInPoster(BaseSocialPoster):
         }
         payload = {
             "registerUploadRequest": {
-                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                "recipes": [recipe],
                 "owner": author_urn,
                 "serviceRelationships": [
                     {
@@ -357,13 +438,13 @@ class LinkedInPoster(BaseSocialPoster):
             if filename:
                 content_type, _ = mimetypes.guess_type(filename)
             if not content_type:
-                if image_bytes.startswith(b'\x89PNG'):
+                if media_bytes.startswith(b'\x89PNG'):
                     content_type = 'image/png'
-                elif image_bytes.startswith(b'\xff\xd8'):
+                elif media_bytes.startswith(b'\xff\xd8'):
                     content_type = 'image/jpeg'
-                elif image_bytes.startswith(b'GIF8'):
+                elif media_bytes.startswith(b'GIF8'):
                     content_type = 'image/gif'
-                elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:16]:
+                elif media_bytes.startswith(b'RIFF') and b'WEBP' in media_bytes[:16]:
                     content_type = 'image/webp'
                 else:
                     content_type = 'application/octet-stream'
@@ -371,7 +452,7 @@ class LinkedInPoster(BaseSocialPoster):
             if 'Content-Type' not in upload_headers:
                 upload_headers['Content-Type'] = content_type
 
-            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=40)
+            upload_res = requests.put(upload_url, data=media_bytes, headers=upload_headers, timeout=60)
             if upload_res.status_code not in [200, 201]:
                 logger.warning(f"LinkedIn image binary upload failed ({upload_res.status_code}): {upload_res.text}")
                 return None
@@ -425,23 +506,19 @@ class LinkedInPoster(BaseSocialPoster):
         if post.excerpt:
             commentary_parts.append(post.excerpt)
 
-        # Check for featured/gallery images and upload to LinkedIn Assets if available
-        media_list = []
-        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
-        if featured:
-            media_list.append(str(featured))
-        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
-        if gallery and isinstance(gallery, (list, tuple)):
-            for item in gallery:
-                u = getattr(item, 'url', None) or str(item)
-                if u and u not in media_list:
-                    media_list.append(u)
+        # Check for featured/gallery media and upload to LinkedIn Assets if available
+        media_list = self.get_post_media(post)
+        video_sources = [src for src in media_list if self.is_video_url(src)]
+        has_video = bool(video_sources)
+        target_sources = video_sources[:1] if has_video else media_list
+        recipe = "urn:li:digitalmediaRecipe:feedshare-video" if has_video else "urn:li:digitalmediaRecipe:feedshare-image"
+        share_category = "VIDEO" if has_video else "IMAGE"
 
         asset_urns = []
-        for img_source in media_list:
-            image_bytes = self._fetch_image_bytes(img_source)
-            if image_bytes:
-                urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(img_source))
+        for media_source in target_sources:
+            media_bytes = self._fetch_image_bytes(media_source)
+            if media_bytes:
+                urn = self._upload_asset(author_urn, access_token, media_bytes, filename=str(media_source), recipe=recipe)
                 if urn:
                     asset_urns.append(urn)
 
@@ -450,12 +527,13 @@ class LinkedInPoster(BaseSocialPoster):
                 commentary_parts.append(f"Read full article: {article_url}")
             commentary = "\n\n".join(filter(None, commentary_parts))
 
+            default_label = "Featured Video" if has_video else "Featured Image"
             media_items = [
                 {
                     "status": "READY",
                     "media": urn,
                     "title": {
-                        "text": f"{post.title or 'Featured Image'} ({idx + 1})" if len(asset_urns) > 1 else (post.title or "Featured Image")
+                        "text": f"{post.title or default_label} ({idx + 1})" if len(asset_urns) > 1 else (post.title or default_label)
                     }
                 }
                 for idx, urn in enumerate(asset_urns)
@@ -463,7 +541,7 @@ class LinkedInPoster(BaseSocialPoster):
 
             share_content = {
                 "shareCommentary": {"text": commentary},
-                "shareMediaCategory": "IMAGE",
+                "shareMediaCategory": share_category,
                 "media": media_items
             }
         else:
@@ -514,35 +592,39 @@ class ThreadsPoster(BaseSocialPoster):
             suffix = f"...\n{article_url}"
             text = text[:max(0, 500 - len(suffix))].rstrip() + suffix
 
-        media_list = []
-        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
-        if featured:
-            media_list.append(str(featured))
-        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
-        if gallery and isinstance(gallery, (list, tuple)):
-            for item in gallery:
-                u = getattr(item, 'url', None) or str(item)
-                if u and u not in media_list:
-                    media_list.append(u)
+        media_list = self.get_post_media(post)
 
         try:
             container_url = f"https://graph.threads.net/v1.0/{user_id}/threads"
 
-            # Carousel (2 to 20 images)
+            # Carousel (2 to 20 images/videos)
             if len(media_list) > 1:
                 child_ids = []
                 for item_url in media_list[:20]:
-                    res_c = requests.post(container_url, data={
-                        'media_type': 'IMAGE',
-                        'image_url': item_url,
+                    is_vid = self.is_video_url(item_url)
+                    c_payload = {
+                        'media_type': 'VIDEO' if is_vid else 'IMAGE',
                         'is_carousel_item': 'true',
                         'access_token': access_token
-                    }, timeout=25)
+                    }
+                    if is_vid:
+                        c_payload['video_url'] = item_url
+                    else:
+                        c_payload['image_url'] = item_url
+
+                    res_c = requests.post(container_url, data=c_payload, timeout=25)
                     d_c = res_c.json() if res_c.content else {}
                     if res_c.status_code != 200 or 'id' not in d_c:
                         err = d_c.get('error', {}).get('message') if isinstance(d_c.get('error'), dict) else str(d_c)
                         return {'success': False, 'error': f"Threads carousel item failed: {err}"}
-                    child_ids.append(str(d_c['id']))
+                    child_id = str(d_c['id'])
+                    if is_vid:
+                        ready, poll_err = self._wait_for_meta_container(
+                            f"https://graph.threads.net/v1.0/{child_id}", access_token, 'status'
+                        )
+                        if not ready:
+                            return {'success': False, 'error': poll_err}
+                    child_ids.append(child_id)
 
                 res_p = requests.post(container_url, data={
                     'media_type': 'CAROUSEL',
@@ -557,9 +639,15 @@ class ThreadsPoster(BaseSocialPoster):
                 creation_id = d_p['id']
             else:
                 payload = {'text': text, 'access_token': access_token}
+                is_vid = False
                 if len(media_list) == 1:
-                    payload['media_type'] = 'IMAGE'
-                    payload['image_url'] = media_list[0]
+                    is_vid = self.is_video_url(media_list[0])
+                    if is_vid:
+                        payload['media_type'] = 'VIDEO'
+                        payload['video_url'] = media_list[0]
+                    else:
+                        payload['media_type'] = 'IMAGE'
+                        payload['image_url'] = media_list[0]
                 else:
                     payload['media_type'] = 'TEXT'
 
@@ -569,6 +657,12 @@ class ThreadsPoster(BaseSocialPoster):
                     err = d1.get('error', {}).get('message') if isinstance(d1.get('error'), dict) else str(d1)
                     return {'success': False, 'error': f"Threads container failed: {err}"}
                 creation_id = d1['id']
+                if is_vid:
+                    ready, poll_err = self._wait_for_meta_container(
+                        f"https://graph.threads.net/v1.0/{creation_id}", access_token, 'status'
+                    )
+                    if not ready:
+                        return {'success': False, 'error': poll_err}
 
             # Step 2: Publish Container
             publish_url = f"https://graph.threads.net/v1.0/{user_id}/threads_publish"
@@ -595,19 +689,10 @@ class TikTokPoster(BaseSocialPoster):
         if not access_token:
             return {'success': False, 'error': 'Missing TikTok Access Token'}
 
-        media_list = []
-        featured = getattr(post, 'featured_image', None) or getattr(post, 'featured_image_url', None)
-        if featured:
-            media_list.append(str(featured))
-        gallery = getattr(post, 'gallery_images', None) or getattr(post, 'media_urls', None)
-        if gallery and isinstance(gallery, (list, tuple)):
-            for item in gallery:
-                u = getattr(item, 'url', None) or str(item)
-                if u and u not in media_list:
-                    media_list.append(u)
+        media_list = self.get_post_media(post)
 
         if not media_list:
-            return {'success': False, 'error': 'TikTok requires a featured image URL to create a post.'}
+            return {'success': False, 'error': 'TikTok requires a featured image or video URL to create a post.'}
 
         headers = {
             "Authorization": f"Bearer {access_token}",
@@ -617,27 +702,47 @@ class TikTokPoster(BaseSocialPoster):
         title = post.title[:150]
         description = f"{post.title}\n\n{post.excerpt or ''}\n\nRead more: {article_url}"[:2200]
 
-        payload = {
-            "post_info": {
-                "title": title,
-                "description": description,
-                "privacy_level": "PUBLIC_TO_EVERYONE",
-                "disable_duet": False,
-                "disable_comment": False,
-                "disable_stitch": False,
-                "auto_add_music": True
-            },
-            "source_info": {
-                "source": "PULL_FROM_URL",
-                "photo_cover_index": 1,
-                "photo_images": media_list[:35]
-            },
-            "post_mode": "DIRECT_POST",
-            "media_type": "PHOTO"
-        }
+        video_urls = [u for u in media_list if self.is_video_url(u)]
+        if video_urls:
+            url = "https://open.tiktokapis.com/v2/post/publish/video/init/"
+            payload = {
+                "post_info": {
+                    "title": title,
+                    "description": description,
+                    "privacy_level": "PUBLIC_TO_EVERYONE",
+                    "disable_duet": False,
+                    "disable_comment": False,
+                    "disable_stitch": False,
+                },
+                "source_info": {
+                    "source": "PULL_FROM_URL",
+                    "video_url": video_urls[0],
+                },
+                "post_mode": "DIRECT_POST",
+                "media_type": "VIDEO"
+            }
+        else:
+            url = "https://open.tiktokapis.com/v2/post/publish/content/init/"
+            payload = {
+                "post_info": {
+                    "title": title,
+                    "description": description,
+                    "privacy_level": "PUBLIC_TO_EVERYONE",
+                    "disable_duet": False,
+                    "disable_comment": False,
+                    "disable_stitch": False,
+                    "auto_add_music": True
+                },
+                "source_info": {
+                    "source": "PULL_FROM_URL",
+                    "photo_cover_index": 1,
+                    "photo_images": media_list[:35]
+                },
+                "post_mode": "DIRECT_POST",
+                "media_type": "PHOTO"
+            }
 
         try:
-            url = "https://open.tiktokapis.com/v2/post/publish/content/init/"
             res = requests.post(url, json=payload, headers=headers, timeout=30)
             data = res.json() if res.content else {}
 

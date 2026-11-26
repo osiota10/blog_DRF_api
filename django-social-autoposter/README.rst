@@ -4,7 +4,7 @@ django-social-autoposter
 
 A standalone, modular Django REST Framework package for broadcasting social media posts, sending direct private messages, and scheduling publications across **Facebook Pages & Messenger**, **Instagram Business & Direct**, **WhatsApp Business Cloud API**, **Threads**, **TikTok**, **X (Twitter)**, and **LinkedIn** with unified logging, generic model linking, and environment-based configuration.
 
-Current Version: **0.5.0**
+Current Version: **0.6.0**
 
 Quick Start
 -----------
@@ -47,13 +47,13 @@ In your Django ``urls.py``:
 
 Supported Social Media Platforms
 --------------------------------
-- **Facebook Pages & Messenger**: Graph API v19.0 feed & multi-photo posts, plus direct customer messaging.
-- **Instagram Business & Direct**: Single-image and native multi-slide Carousel publishing (up to 10 slides) and Instagram Direct messaging.
+- **Facebook Pages & Messenger**: Graph API v19.0 feed, Page video, and multi-photo/video carousel posts, plus direct customer messaging.
+- **Instagram Business & Direct**: Single-image, Reels video, and native multi-slide image/video Carousel publishing (up to 10 slides) and Instagram Direct messaging.
 - **WhatsApp Business Cloud API**: Meta Graph API direct messaging with support for text, documents, images, audio, video, and templates.
-- **Threads (Meta)**: Two-step media container & publish API (supports text-only, images, and Carousels up to 20 slides).
-- **TikTok**: Content Posting API direct post (single photo/video or multi-photo Carousel up to 35 slides via public URLs).
-- **X / Twitter**: API v2 ``POST /2/tweets`` and Direct Messaging via OAuth 1.0a / OAuth 2.0 User Context.
-- **LinkedIn**: UGC Post API v2 (3-step Assets API single & multi-image upload) and Member Messaging API v2.
+- **Threads (Meta)**: Two-step media container & publish API (supports text-only, images, videos, and mixed Carousels up to 20 slides).
+- **TikTok**: Content Posting API direct post (video via ``PULL_FROM_URL`` or multi-photo Carousel up to 35 slides).
+- **X / Twitter**: API v2 ``POST /2/tweets`` with chunked image/video media upload and Direct Messaging via OAuth 1.0a / OAuth 2.0 User Context.
+- **LinkedIn**: UGC Post API v2 (3-step Assets API single/multi-image and video upload) and Member Messaging API v2.
 
 Python Service Usage
 --------------------

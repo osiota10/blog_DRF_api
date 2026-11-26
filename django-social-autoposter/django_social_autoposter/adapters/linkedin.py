@@ -59,8 +59,25 @@ class LinkedInAdapter(BaseSocialAdapter):
         return None
 
     def _upload_image(self, author_urn: str, access_token: str, image_bytes: bytes, filename: str = None) -> str:
+        """Backward-compatible helper for uploading an image asset to LinkedIn."""
+        return self._upload_asset(
+            author_urn=author_urn,
+            access_token=access_token,
+            media_bytes=image_bytes,
+            filename=filename,
+            recipe="urn:li:digitalmediaRecipe:feedshare-image"
+        )
+
+    def _upload_asset(
+        self,
+        author_urn: str,
+        access_token: str,
+        media_bytes: bytes,
+        filename: str = None,
+        recipe: str = "urn:li:digitalmediaRecipe:feedshare-image",
+    ) -> str:
         """
-        Registers an upload with LinkedIn Assets API, uploads the raw image bytes via PUT,
+        Registers an upload with LinkedIn Assets API, uploads raw media bytes via PUT,
         verifies that the Digital Media Asset transitions to AVAILABLE, and returns the asset URN.
         """
         register_url = "https://api.linkedin.com/v2/assets?action=registerUpload"
@@ -71,7 +88,7 @@ class LinkedInAdapter(BaseSocialAdapter):
         }
         payload = {
             "registerUploadRequest": {
-                "recipes": ["urn:li:digitalmediaRecipe:feedshare-image"],
+                "recipes": [recipe],
                 "owner": author_urn,
                 "serviceRelationships": [
                     {
@@ -109,13 +126,13 @@ class LinkedInAdapter(BaseSocialAdapter):
             if filename:
                 content_type, _ = mimetypes.guess_type(filename)
             if not content_type:
-                if image_bytes.startswith(b'\x89PNG'):
+                if media_bytes.startswith(b'\x89PNG'):
                     content_type = 'image/png'
-                elif image_bytes.startswith(b'\xff\xd8'):
+                elif media_bytes.startswith(b'\xff\xd8'):
                     content_type = 'image/jpeg'
-                elif image_bytes.startswith(b'GIF8'):
+                elif media_bytes.startswith(b'GIF8'):
                     content_type = 'image/gif'
-                elif image_bytes.startswith(b'RIFF') and b'WEBP' in image_bytes[:16]:
+                elif media_bytes.startswith(b'RIFF') and b'WEBP' in media_bytes[:16]:
                     content_type = 'image/webp'
                 else:
                     content_type = 'application/octet-stream'
@@ -123,7 +140,7 @@ class LinkedInAdapter(BaseSocialAdapter):
             if 'Content-Type' not in upload_headers:
                 upload_headers['Content-Type'] = content_type
 
-            upload_res = requests.put(upload_url, data=image_bytes, headers=upload_headers, timeout=40)
+            upload_res = requests.put(upload_url, data=media_bytes, headers=upload_headers, timeout=60)
             if upload_res.status_code not in [200, 201]:
                 logger.warning(f"LinkedIn image binary upload failed ({upload_res.status_code}): {upload_res.text}")
                 return None
@@ -186,17 +203,25 @@ class LinkedInAdapter(BaseSocialAdapter):
         if broadcast.message:
             commentary_parts.append(broadcast.message)
 
-        # 1. Attempt to upload all images if image_url or media_urls provided
-        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        # 1. Attempt to upload media assets (images or video) if image_url or media_urls provided
+        extra_data = getattr(broadcast, 'extra_data', None) or {}
+        media_list = self.get_media_list(broadcast)
+        video_sources = [src for src in media_list if self.is_video_url(src, extra_data if len(media_list) == 1 else None)]
+        has_video = bool(video_sources)
+
         asset_urns = []
-        for img_src in media_list:
-            image_bytes = self._fetch_image_bytes(img_src)
-            if image_bytes:
-                urn = self._upload_image(author_urn, access_token, image_bytes, filename=str(img_src))
+        share_category = "VIDEO" if has_video else "IMAGE"
+        target_sources = video_sources[:1] if has_video else media_list
+        recipe = "urn:li:digitalmediaRecipe:feedshare-video" if has_video else "urn:li:digitalmediaRecipe:feedshare-image"
+
+        for media_src in target_sources:
+            media_bytes = self._fetch_image_bytes(media_src)
+            if media_bytes:
+                urn = self._upload_asset(author_urn, access_token, media_bytes, filename=str(media_src), recipe=recipe)
                 if urn:
                     asset_urns.append(urn)
             else:
-                logger.warning(f"Could not retrieve image bytes from image URL/path: {img_src}")
+                logger.warning(f"Could not retrieve media bytes from URL/path: {media_src}")
 
         # 2. Build share_content based on uploaded assets or link
         if asset_urns:
@@ -204,12 +229,13 @@ class LinkedInAdapter(BaseSocialAdapter):
                 commentary_parts.append(broadcast.link_url)
             commentary = "\n\n".join(filter(None, commentary_parts)) or "New Update"
 
+            default_label = "Post Video" if has_video else "Post Image"
             media_items = [
                 {
                     "status": "READY",
                     "media": urn,
                     "title": {
-                        "text": f"{broadcast.title or 'Post Image'} ({idx + 1})" if len(asset_urns) > 1 else (broadcast.title or "Post Image")
+                        "text": f"{broadcast.title or default_label} ({idx + 1})" if len(asset_urns) > 1 else (broadcast.title or default_label)
                     }
                 }
                 for idx, urn in enumerate(asset_urns)
@@ -217,7 +243,7 @@ class LinkedInAdapter(BaseSocialAdapter):
 
             share_content = {
                 "shareCommentary": {"text": commentary},
-                "shareMediaCategory": "IMAGE",
+                "shareMediaCategory": share_category,
                 "media": media_items
             }
         elif broadcast.link_url:

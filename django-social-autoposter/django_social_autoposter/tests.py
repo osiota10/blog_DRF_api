@@ -380,6 +380,193 @@ class SocialAutoPosterModelAndServiceTests(TestCase):
         self.assertEqual(parent_call[1]['data']['media_type'], 'CAROUSEL')
         self.assertEqual(parent_call[1]['data']['children'], 'tc_1,tc_2')
 
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_instagram_adapter_video_reels_and_mixed_carousel(self, mock_post, mock_get):
+        adapter = InstagramAdapter({'page_or_account_id': 'ig_123', 'access_token': 'tok_456'})
+
+        mock_status = MagicMock(status_code=200, content=b'{"status_code": "FINISHED"}')
+        mock_status.json.return_value = {"status_code": "FINISHED"}
+        mock_get.return_value = mock_status
+
+        # 1. Single Video (Reels)
+        vid_broadcast = SocialBroadcast.objects.create(
+            title="Launch Reel",
+            message="Watch our demo",
+            image_url="https://example.com/demo.mp4"
+        )
+        m_c = MagicMock(status_code=200, content=b'{"id": "reel_c1"}')
+        m_c.json.return_value = {"id": "reel_c1"}
+        m_p = MagicMock(status_code=200, content=b'{"id": "reel_pub1"}')
+        m_p.json.return_value = {"id": "reel_pub1"}
+        mock_post.side_effect = [m_c, m_p]
+
+        res_reel = adapter.publish(vid_broadcast)
+        self.assertTrue(res_reel['success'])
+        self.assertEqual(mock_post.call_args_list[0][1]['data']['media_type'], 'REELS')
+        self.assertEqual(mock_post.call_args_list[0][1]['data']['video_url'], 'https://example.com/demo.mp4')
+
+        # 2. Mixed Image + Video Carousel
+        mock_post.reset_mock()
+        mix_broadcast = SocialBroadcast.objects.create(
+            title="Mixed Carousel",
+            message="Photo and video slides",
+            media_urls=["https://example.com/photo.jpg", "https://example.com/clip.mp4"]
+        )
+        mc1 = MagicMock(status_code=200, content=b'{"id": "c_img"}')
+        mc1.json.return_value = {"id": "c_img"}
+        mc2 = MagicMock(status_code=200, content=b'{"id": "c_vid"}')
+        mc2.json.return_value = {"id": "c_vid"}
+        mp = MagicMock(status_code=200, content=b'{"id": "c_parent"}')
+        mp.json.return_value = {"id": "c_parent"}
+        mpub = MagicMock(status_code=200, content=b'{"id": "ig_mix_99"}')
+        mpub.json.return_value = {"id": "ig_mix_99"}
+        mock_post.side_effect = [mc1, mc2, mp, mpub]
+
+        res_mix = adapter.publish(mix_broadcast)
+        self.assertTrue(res_mix['success'])
+        self.assertEqual(mock_post.call_args_list[0][1]['data']['image_url'], 'https://example.com/photo.jpg')
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['media_type'], 'VIDEO')
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['video_url'], 'https://example.com/clip.mp4')
+        self.assertEqual(mock_post.call_args_list[2][1]['data']['media_type'], 'CAROUSEL')
+
+    @patch('requests.post')
+    def test_facebook_adapter_video_and_mixed_carousel(self, mock_post):
+        adapter = FacebookAdapter({'page_or_account_id': 'pg_123', 'access_token': 'tok_456'})
+
+        # 1. Single Video
+        b_vid = SocialBroadcast.objects.create(
+            title="FB Video",
+            message="Single video post",
+            image_url="https://example.com/video.mp4"
+        )
+        m_vid = MagicMock(status_code=200, content=b'{"id": "fb_vid_1"}')
+        m_vid.json.return_value = {"id": "fb_vid_1"}
+        mock_post.return_value = m_vid
+
+        res1 = adapter.publish(b_vid)
+        self.assertTrue(res1['success'])
+        self.assertIn('/pg_123/videos', mock_post.call_args[0][0])
+        self.assertEqual(mock_post.call_args[1]['data']['file_url'], 'https://example.com/video.mp4')
+
+        # 2. Mixed Image + Video Carousel
+        mock_post.reset_mock()
+        b_mix = SocialBroadcast.objects.create(
+            title="FB Mixed Album",
+            message="Photo + Video",
+            media_urls=["https://example.com/p1.jpg", "https://example.com/v1.mp4"]
+        )
+        m1 = MagicMock(status_code=200, content=b'{"id": "ph_1"}')
+        m1.json.return_value = {"id": "ph_1"}
+        m2 = MagicMock(status_code=200, content=b'{"id": "vd_1"}')
+        m2.json.return_value = {"id": "vd_1"}
+        mf = MagicMock(status_code=200, content=b'{"id": "pg_123_feed_99"}')
+        mf.json.return_value = {"id": "pg_123_feed_99"}
+        mock_post.side_effect = [m1, m2, mf]
+
+        res2 = adapter.publish(b_mix)
+        self.assertTrue(res2['success'])
+        self.assertIn('/pg_123/photos', mock_post.call_args_list[0][0][0])
+        self.assertIn('/pg_123/videos', mock_post.call_args_list[1][0][0])
+        self.assertIn('/pg_123/feed', mock_post.call_args_list[2][0][0])
+        self.assertIn('attached_media[1]', mock_post.call_args_list[2][1]['data'])
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_threads_adapter_video_carousel(self, mock_post, mock_get):
+        adapter = ThreadsAdapter({'page_or_account_id': 'th_123', 'access_token': 'tok_456'})
+        mock_status = MagicMock(status_code=200, content=b'{"status": "FINISHED"}')
+        mock_status.json.return_value = {"status": "FINISHED"}
+        mock_get.return_value = mock_status
+
+        broadcast = SocialBroadcast.objects.create(
+            title="Threads Mixed Carousel",
+            message="Image and video",
+            media_urls=["https://example.com/t1.jpg", "https://example.com/t2.mp4"]
+        )
+        mc1 = MagicMock(status_code=200, content=b'{"id": "tc_1"}')
+        mc1.json.return_value = {"id": "tc_1"}
+        mc2 = MagicMock(status_code=200, content=b'{"id": "tc_2"}')
+        mc2.json.return_value = {"id": "tc_2"}
+        mp = MagicMock(status_code=200, content=b'{"id": "th_parent"}')
+        mp.json.return_value = {"id": "th_parent"}
+        mpub = MagicMock(status_code=200, content=b'{"id": "th_post_888"}')
+        mpub.json.return_value = {"id": "th_post_888"}
+        mock_post.side_effect = [mc1, mc2, mp, mpub]
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['media_type'], 'VIDEO')
+        self.assertEqual(mock_post.call_args_list[1][1]['data']['video_url'], 'https://example.com/t2.mp4')
+        self.assertEqual(mock_post.call_args_list[2][1]['data']['media_type'], 'CAROUSEL')
+
+    @patch('requests.put')
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_linkedin_adapter_video(self, mock_post, mock_get, mock_put):
+        adapter = LinkedInAdapter({'page_or_account_id': '123456', 'access_token': 'li_tok'})
+        broadcast = SocialBroadcast.objects.create(
+            title="LinkedIn Video",
+            message="Video update",
+            image_url="https://example.com/promo.mp4"
+        )
+
+        mock_get_res = MagicMock(status_code=200, content=b'fake_video_bytes')
+        mock_get_res.json.return_value = {'recipes': [{'status': 'AVAILABLE'}]}
+        mock_get.return_value = mock_get_res
+
+        mock_reg = MagicMock(status_code=200, content=b'{"value": {"asset": "urn:li:digitalmediaAsset:vid_1"}}')
+        mock_reg.json.return_value = {
+            "value": {
+                "asset": "urn:li:digitalmediaAsset:vid_1",
+                "uploadMechanism": {
+                    "com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest": {
+                        "uploadUrl": "https://upload.linkedin.com/video"
+                    }
+                }
+            }
+        }
+        mock_ugc = MagicMock(status_code=201, content=b'{"id": "urn:li:share:999"}')
+        mock_ugc.json.return_value = {"id": "urn:li:share:999"}
+        mock_post.side_effect = [mock_reg, mock_ugc]
+        mock_put.return_value = MagicMock(status_code=201, content=b'')
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        reg_payload = mock_post.call_args_list[0][1]['json']
+        self.assertEqual(reg_payload['registerUploadRequest']['recipes'], ['urn:li:digitalmediaRecipe:feedshare-video'])
+        ugc_payload = mock_post.call_args_list[1][1]['json']
+        self.assertEqual(ugc_payload['specificContent']['com.linkedin.ugc.ShareContent']['shareMediaCategory'], 'VIDEO')
+
+    @patch('requests.get')
+    @patch('requests.post')
+    def test_twitter_adapter_video_upload(self, mock_post, mock_get):
+        adapter = TwitterAdapter({
+            'api_key': 'k', 'api_secret': 's',
+            'access_token': 'at', 'access_token_secret': 'ats'
+        })
+        broadcast = SocialBroadcast.objects.create(
+            title="X Video",
+            message="Watch this",
+            image_url="https://example.com/clip.mp4"
+        )
+
+        mock_get.return_value = MagicMock(status_code=200, content=b'video_bytes')
+        m_init = MagicMock(status_code=202, content=b'{"media_id_string": "tw_vid_123"}')
+        m_init.json.return_value = {"media_id_string": "tw_vid_123"}
+        m_app = MagicMock(status_code=204, content=b'')
+        m_fin = MagicMock(status_code=201, content=b'{"media_id_string": "tw_vid_123"}')
+        m_fin.json.return_value = {"media_id_string": "tw_vid_123"}
+        m_tweet = MagicMock(status_code=201, content=b'{"data": {"id": "tweet_999"}}')
+        m_tweet.json.return_value = {"data": {"id": "tweet_999"}}
+        mock_post.side_effect = [m_init, m_app, m_fin, m_tweet]
+
+        res = adapter.publish(broadcast)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['post_id'], 'tweet_999')
+        self.assertEqual(mock_post.call_args_list[0][1]['data']['media_category'], 'tweet_video')
+        self.assertEqual(mock_post.call_args_list[3][1]['json']['media'], {'media_ids': ['tw_vid_123']})
+
 
 
 class SocialAutoPosterAPITests(TestCase):

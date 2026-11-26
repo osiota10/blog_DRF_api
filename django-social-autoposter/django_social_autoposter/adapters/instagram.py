@@ -1,3 +1,4 @@
+import time
 import requests
 import logging
 from .base import BaseSocialAdapter
@@ -7,6 +8,28 @@ logger = logging.getLogger(__name__)
 
 class InstagramAdapter(BaseSocialAdapter):
     platform_name = "instagram"
+
+    def _wait_for_container_ready(self, container_id: str, access_token: str, max_attempts: int = 10, sleep_seconds: float = 2.0):
+        """Polls Meta Graph API until a video container finishes processing."""
+        status_url = f"https://graph.facebook.com/v19.0/{container_id}"
+        for attempt in range(max_attempts):
+            try:
+                res = requests.get(
+                    status_url,
+                    params={'fields': 'status_code,status', 'access_token': access_token},
+                    timeout=15
+                )
+                data = res.json() if getattr(res, 'content', None) and callable(getattr(res, 'json', None)) else {}
+                status_code = str(data.get('status_code', '')).upper()
+                if status_code in ('FINISHED', 'PUBLISHED', ''):
+                    return True, None
+                if status_code in ('ERROR', 'EXPIRED'):
+                    return False, data.get('status') or f"Instagram video container failed with status {status_code}"
+            except Exception as e:
+                logger.warning("Instagram container status poll error: %s", e)
+            if attempt < max_attempts - 1:
+                time.sleep(sleep_seconds)
+        return False, "Instagram video container processing timed out."
 
     def publish(self, broadcast) -> dict:
         ig_account_id = self.creds.get('page_or_account_id')
@@ -21,13 +44,14 @@ class InstagramAdapter(BaseSocialAdapter):
                 'raw_response': None
             }
 
-        media_list = getattr(broadcast, 'all_media_urls', None) or ([broadcast.image_url] if broadcast.image_url else [])
+        extra_data = getattr(broadcast, 'extra_data', None) or {}
+        media_list = self.get_media_list(broadcast)
         if not media_list:
             return {
                 'success': False,
                 'post_id': None,
                 'post_url': None,
-                'error': 'Instagram Business API requires an image attachment (image_url or media_urls).',
+                'error': 'Instagram Business API requires a media attachment (image_url or media_urls).',
                 'raw_response': None
             }
 
@@ -43,15 +67,22 @@ class InstagramAdapter(BaseSocialAdapter):
         try:
             container_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media"
 
-            # Case A: Carousel / Multi-Image Post (2 to 10 images)
+            # Case A: Carousel / Multi-Media Post (2 to 10 images/videos)
             if len(media_list) > 1:
                 child_ids = []
                 for item_url in media_list[:10]:
-                    child_res = requests.post(container_url, data={
-                        'image_url': item_url,
+                    is_vid = self.is_video_url(item_url)
+                    child_payload = {
                         'is_carousel_item': 'true',
                         'access_token': access_token
-                    }, timeout=25)
+                    }
+                    if is_vid:
+                        child_payload['media_type'] = 'VIDEO'
+                        child_payload['video_url'] = item_url
+                    else:
+                        child_payload['image_url'] = item_url
+
+                    child_res = requests.post(container_url, data=child_payload, timeout=25)
                     child_data = child_res.json() if child_res.content else {}
                     if child_res.status_code != 200 or 'id' not in child_data:
                         err = child_data.get('error', {}).get('message') if isinstance(child_data.get('error'), dict) else str(child_data)
@@ -62,7 +93,18 @@ class InstagramAdapter(BaseSocialAdapter):
                             'error': f"Instagram carousel child container creation failed: {err}",
                             'raw_response': child_data
                         }
-                    child_ids.append(str(child_data['id']))
+                    child_id = str(child_data['id'])
+                    if is_vid:
+                        ready, poll_err = self._wait_for_container_ready(child_id, access_token)
+                        if not ready:
+                            return {
+                                'success': False,
+                                'post_id': None,
+                                'post_url': None,
+                                'error': poll_err,
+                                'raw_response': child_data
+                            }
+                    child_ids.append(child_id)
 
                 # Create parent CAROUSEL container
                 parent_res = requests.post(container_url, data={
@@ -83,13 +125,22 @@ class InstagramAdapter(BaseSocialAdapter):
                     }
                 creation_id = parent_data['id']
 
-            # Case B: Single Image Post
+            # Case B: Single Video (Reels) or Single Image Post
             else:
-                res_container = requests.post(container_url, data={
-                    'image_url': media_list[0],
+                single_url = media_list[0]
+                is_vid = self.is_video_url(single_url, extra_data)
+                container_payload = {
                     'caption': caption,
                     'access_token': access_token
-                }, timeout=25)
+                }
+                if is_vid:
+                    container_payload['media_type'] = 'REELS'
+                    container_payload['video_url'] = single_url
+                    container_payload['share_to_feed'] = 'true'
+                else:
+                    container_payload['image_url'] = single_url
+
+                res_container = requests.post(container_url, data=container_payload, timeout=25)
                 data_container = res_container.json() if res_container.content else {}
 
                 if res_container.status_code != 200 or 'id' not in data_container:
@@ -103,6 +154,16 @@ class InstagramAdapter(BaseSocialAdapter):
                     }
 
                 creation_id = data_container['id']
+                if is_vid:
+                    ready, poll_err = self._wait_for_container_ready(str(creation_id), access_token)
+                    if not ready:
+                        return {
+                            'success': False,
+                            'post_id': None,
+                            'post_url': None,
+                            'error': poll_err,
+                            'raw_response': data_container
+                        }
 
             # Step 2: Publish Media Container
             publish_url = f"https://graph.facebook.com/v19.0/{ig_account_id}/media_publish"
